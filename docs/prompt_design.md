@@ -1,0 +1,2 @@
+Fetch this design file, read its readme, and implement the relevant aspects of the design. https://api.anthropic.com/v1/design/h/GN-H1JsXn7gIXvWP2jFI8w?open_file=Ti+Koin+Gwada.html
+Implement: Ti Koin Gwada.html
