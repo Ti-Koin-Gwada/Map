@@ -6,27 +6,63 @@ import { useRef, useState, useLayoutEffect } from 'react'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
-// Style de carte sobre (masque les POI Google par défaut)
+// Style sobre (masque les POI Google) — appliqué uniquement en mode roadmap/terrain
 const MAP_STYLES = [
-  { featureType: 'poi',            elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  { featureType: 'poi.business',   elementType: 'all',    stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit',        elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi',          elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.business', elementType: 'all',    stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit',      elementType: 'labels', stylers: [{ visibility: 'off' }] },
 ]
+
+const MAP_TYPES = [
+  { id: 'terrain',   label: 'Terrain'   },
+  { id: 'roadmap',   label: 'Route'     },
+  { id: 'satellite', label: 'Satellite' },
+  { id: 'hybrid',    label: 'Hybride'   },
+]
+
+function MapTypeSelector({ value, onChange }) {
+  return (
+    <div
+      className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex rounded-xl overflow-hidden shadow-md"
+      style={{ border: '1px solid var(--color-border)' }}
+    >
+      {MAP_TYPES.map((t, i) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onChange(t.id)}
+          className="px-3.5 py-2 text-xs font-semibold transition-all duration-150"
+          style={{
+            background:  value === t.id ? 'var(--color-forest)' : 'rgba(255,255,255,0.92)',
+            color:       value === t.id ? '#fff' : 'var(--color-text-primary)',
+            backdropFilter: 'blur(8px)',
+            borderRight: i < MAP_TYPES.length - 1 ? '1px solid var(--color-border)' : 'none',
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 // ── Google Maps ──────────────────────────────────────────────
 function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle }) {
+  const [mapType, setMapType] = useState('terrain')
+  const isSatellite = mapType === 'satellite' || mapType === 'hybrid'
+
   return (
     <APIProvider apiKey={GOOGLE_MAPS_KEY}>
       <Map
         defaultCenter={MAP_CENTER}
         defaultZoom={MAP_ZOOM}
-        mapTypeId="terrain"
+        mapTypeId={mapType}
         gestureHandling="greedy"
         disableDefaultUI={false}
         mapTypeControl={false}
         streetViewControl={false}
         fullscreenControl={false}
-        styles={MAP_STYLES}
+        styles={isSatellite ? [] : MAP_STYLES}
         style={{ width: '100%', height: '100%' }}
       >
         {pois.map(poi => {
@@ -54,6 +90,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
           )
         })}
       </Map>
+      <MapTypeSelector value={mapType} onChange={setMapType} />
     </APIProvider>
   )
 }
