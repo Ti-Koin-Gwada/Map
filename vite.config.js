@@ -8,7 +8,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          mapbox: ['mapbox-gl', 'react-map-gl'],
+          gmaps:  ['@vis.gl/react-google-maps'],
           vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
         },
       },

@@ -22,7 +22,5 @@ export const FORFAIT_OPTIONS = [
   { value: 'personnalise', label: 'Personnalisé',  desc: "Jusqu'à 20 spots + notes" },
 ]
 
-export const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
-
-export const MAP_CENTER = [-61.551, 16.265] // Guadeloupe
-export const MAP_ZOOM   = 9.5
+export const MAP_CENTER = { lat: 16.265, lng: -61.551 } // Guadeloupe
+export const MAP_ZOOM   = 10
