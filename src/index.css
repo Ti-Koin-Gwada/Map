@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* ── Botanical Fresh — design tokens ─────────────────────── */
+:root {
+  --color-bg:           #FAFAF7;
+  --color-surface:      #FFFFFF;
+  --color-border:       #E8EDE6;
+  --color-border-mid:   #D0DDD0;
+
+  --color-forest:       #2D5A3D;
+  --color-forest-dark:  #1A2E20;
+  --color-forest-mid:   #4A8A5A;
+  --color-vegetation:   #90B898;
+  --color-mist:         #C8DEC8;
+
+  --color-text-primary:   #1A2E20;
+  --color-text-secondary: #5A7A60;
+  --color-text-muted:     #8AA890;
+
+  --color-plage:       #0EA5E9;
+  --color-restaurant:  #F97316;
+  --color-randonnee:   #22C55E;
+  --color-activite:    #A855F7;
+  --color-spot_cache:  #EAB308;
+}
+
+/* ── Base ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Mapbox overrides ───────────────────────────────────── */
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib {
+  opacity: 0.5;
+}
+
+/* ── Custom scrollbar ───────────────────────────────────── */
+.tk-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-mid) transparent;
+}
+.tk-scroll::-webkit-scrollbar { width: 5px; }
+.tk-scroll::-webkit-scrollbar-track { background: transparent; }
+.tk-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border-mid);
+  border-radius: 99px;
+}
+
+/* ── Textarea base ──────────────────────────────────────── */
+textarea {
+  resize: vertical;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Input autofill fix ─────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px white inset;
+  -webkit-text-fill-color: var(--color-text-primary);
+}
