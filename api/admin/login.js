@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   const token = jwt.sign(
-    { role: 'admin', iat: Math.floor(Date.now() / 1000) },
+    { role: 'admin' },
     process.env.JWT_SECRET,
     { expiresIn: '24h' },
   )
