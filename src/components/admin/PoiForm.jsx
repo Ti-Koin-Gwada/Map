@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import { Upload, X, MapPin, Crosshair, Hand } from 'lucide-react'
-import { CATEGORIES, TAG_OPTIONS } from '../../lib/constants.js'
+import { useState, useCallback } from 'react'
+import { MapPin, Crosshair, Hand } from 'lucide-react'
+import { Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { CATEGORIES, TAG_OPTIONS, MAP_CENTER, MAP_ZOOM } from '../../lib/constants.js'
 import GeocoderInput from './GeocoderInput.jsx'
 import Button from '../ui/Button.jsx'
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
 const GEO_TABS = [
   { id: 'address', label: 'Adresse',      icon: MapPin },
@@ -46,6 +49,66 @@ function Textarea({ value, onChange, placeholder, rows = 3 }) {
       className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all"
       style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'var(--color-surface)' }}
     />
+  )
+}
+
+// ── Carte cliquable pour placer un point ────────────────────
+function MapPicker({ latitude, longitude, onChange }) {
+  const handleClick = useCallback((e) => {
+    if (!e.detail?.latLng) return
+    onChange(e.detail.latLng.lat, e.detail.latLng.lng)
+  }, [onChange])
+
+  const handleDragEnd = useCallback((e) => {
+    if (!e.latLng) return
+    onChange(e.latLng.lat(), e.latLng.lng())
+  }, [onChange])
+
+  const hasPin = latitude != null && longitude != null
+
+  if (!GOOGLE_MAPS_KEY) {
+    return (
+      <div className="rounded-xl p-4 text-sm text-center" style={{ background: 'var(--color-bg)', border: '1.5px dashed var(--color-border-mid)', color: 'var(--color-text-muted)' }}>
+        Configurez VITE_GOOGLE_MAPS_KEY pour activer le placement sur la carte
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ height: 280, border: '1.5px solid var(--color-border-mid)', cursor: 'crosshair' }}
+      >
+        <Map
+          defaultCenter={hasPin ? { lat: latitude, lng: longitude } : MAP_CENTER}
+          defaultZoom={hasPin ? 13 : MAP_ZOOM}
+          mapTypeId="terrain"
+          gestureHandling="greedy"
+          disableDefaultUI
+          zoomControl
+          onClick={handleClick}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {hasPin && (
+            <AdvancedMarker
+              position={{ lat: latitude, lng: longitude }}
+              draggable
+              onDragEnd={handleDragEnd}
+            />
+          )}
+        </Map>
+      </div>
+      {hasPin ? (
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          📍 {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez ailleurs pour déplacer
+        </p>
+      ) : (
+        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          Cliquez sur la carte pour placer le spot. Le marqueur est ensuite déplaçable.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -161,9 +224,11 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
           </div>
         )}
         {geoTab === 'manual' && (
-          <div className="rounded-xl p-4 text-sm text-center" style={{ background: 'var(--color-bg)', border: '1.5px dashed var(--color-border-mid)', color: 'var(--color-text-muted)' }}>
-            Cliquez sur la carte pour placer le spot — disponible dans la version complète avec Mapbox
-          </div>
+          <MapPicker
+            latitude={form.latitude ? parseFloat(form.latitude) : null}
+            longitude={form.longitude ? parseFloat(form.longitude) : null}
+            onChange={(lat, lng) => { set('latitude', lat); set('longitude', lng) }}
+          />
         )}
         {form.latitude && form.longitude && (
           <p className="mt-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>

@@ -1,4 +1,4 @@
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { Map, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { MAP_CENTER, MAP_ZOOM, CATEGORIES } from '../../lib/constants.js'
 import GuadeloupeSVG, { VB } from './GuadeloupeSVG.jsx'
 import MarkerPin from './MarkerPin.jsx'
@@ -6,8 +6,7 @@ import { useRef, useState, useLayoutEffect } from 'react'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
 
-// Style sobre (masque les POI Google) — appliqué uniquement en mode roadmap/terrain
-const MAP_STYLES = [
+const MAP_STYLES_CLEAN = [
   { featureType: 'poi',          elementType: 'labels', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.business', elementType: 'all',    stylers: [{ visibility: 'off' }] },
   { featureType: 'transit',      elementType: 'labels', stylers: [{ visibility: 'off' }] },
@@ -52,7 +51,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
   const isSatellite = mapType === 'satellite' || mapType === 'hybrid'
 
   return (
-    <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+    <div className="relative w-full h-full">
       <Map
         defaultCenter={MAP_CENTER}
         defaultZoom={MAP_ZOOM}
@@ -62,15 +61,14 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
         mapTypeControl={false}
         streetViewControl={false}
         fullscreenControl={false}
-        styles={isSatellite ? [] : MAP_STYLES}
+        styles={isSatellite ? [] : MAP_STYLES_CLEAN}
         style={{ width: '100%', height: '100%' }}
       >
         {pois.map(poi => {
           if (!poi.latitude || !poi.longitude) return null
-          const cat      = CATEGORIES[poi.category]
+          const cat        = CATEGORIES[poi.category]
           const isSelected = selectedId === poi.id
           const isChosen   = chosenIds?.includes(poi.id)
-
           return (
             <AdvancedMarker
               key={poi.id}
@@ -91,11 +89,11 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
         })}
       </Map>
       <MapTypeSelector value={mapType} onChange={setMapType} />
-    </APIProvider>
+    </div>
   )
 }
 
-// ── SVG Map fallback (sans clé API) ─────────────────────────
+// ── SVG Map fallback ─────────────────────────────────────────
 function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle }) {
   const ref  = useRef(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
@@ -134,8 +132,8 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
       </div>
       {scale > 0 && pois.map(poi => {
         if (!poi.latitude || !poi.longitude) return null
-        const p        = project(poi.longitude, poi.latitude)
-        const cat      = CATEGORIES[poi.category]
+        const p          = project(poi.longitude, poi.latitude)
+        const cat        = CATEGORIES[poi.category]
         const isSelected = selectedId === poi.id
         const isChosen   = chosenIds?.includes(poi.id)
         return (
@@ -156,23 +154,15 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
   )
 }
 
-// ── MapView (auto-switch) ────────────────────────────────────
 export default function MapView({
-  pois = [],
-  selectedId,
-  onSelect,
-  selectionMode = false,
-  chosenIds,
-  onToggle,
+  pois = [], selectedId, onSelect,
+  selectionMode = false, chosenIds, onToggle,
   className = '',
 }) {
   const props = { pois, selectedId, onSelect, selectionMode, chosenIds, onToggle }
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {GOOGLE_MAPS_KEY
-        ? <GoogleMapView {...props} />
-        : <SVGMapCanvas  {...props} />
-      }
+      {GOOGLE_MAPS_KEY ? <GoogleMapView {...props} /> : <SVGMapCanvas {...props} />}
     </div>
   )
 }
