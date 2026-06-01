@@ -151,9 +151,11 @@ export default function PoiManager() {
           <h1 className="font-serif italic font-semibold text-3xl" style={{ color: 'var(--color-forest-dark)' }}>
             Mes spots
           </h1>
-          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {pois.length} spots dans la base
-          </span>
+          {!loading && (
+            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              {pois.length} spot{pois.length !== 1 ? 's' : ''} dans la base
+            </span>
+          )}
         </div>
         <button
           type="button"
