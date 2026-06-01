@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { MapPin, Crosshair, Hand } from 'lucide-react'
-import { Map } from '@vis.gl/react-google-maps'
+import { Map, useMap } from '@vis.gl/react-google-maps'
 import { CATEGORIES, TAG_OPTIONS, MAP_CENTER, MAP_ZOOM } from '../../lib/constants.js'
 import GeocoderInput from './GeocoderInput.jsx'
 import HtmlMarker from '../map/HtmlMarker.jsx'
@@ -53,16 +53,26 @@ function Textarea({ value, onChange, placeholder, rows = 3 }) {
   )
 }
 
-// ── Carte cliquable pour placer un point ────────────────────
+// Capture l'instance de la carte pour lire son centre
+function MapCenterRef({ mapRef }) {
+  mapRef.current = useMap()
+  return null
+}
+
+// ── Carte avec pin central flottant ─────────────────────────
 function MapPicker({ latitude, longitude, onChange }) {
   const [placing, setPlacing] = useState(false)
+  const mapRef = useRef(null)
 
-  const handleClick = useCallback((e) => {
-    if (!placing) return
-    if (!e.detail?.latLng) return
-    onChange(e.detail.latLng.lat, e.detail.latLng.lng)
+  const handleConfirm = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    const center = map.getCenter()
+    onChange(center.lat(), center.lng())
     setPlacing(false)
-  }, [placing, onChange])
+  }, [onChange])
+
+  const handleCancel = useCallback(() => setPlacing(false), [])
 
   useEffect(() => {
     if (!placing) return
@@ -83,36 +93,13 @@ function MapPicker({ latitude, longitude, onChange }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Bouton d'activation du mode placement */}
-      <button
-        type="button"
-        onClick={() => setPlacing(p => !p)}
-        className="self-start flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-        style={{
-          background: placing ? '#2D5A3D' : 'var(--color-border)',
-          color: placing ? 'white' : 'var(--color-text-secondary)',
-          border: placing ? '1.5px solid #2D5A3D' : '1.5px solid transparent',
-        }}
-      >
-        <span>{placing ? '✕ Annuler' : '📍 Placer le spot'}</span>
-      </button>
 
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          height: 280,
-          border: placing ? '2px solid #2D5A3D' : '1.5px solid var(--color-border-mid)',
-          cursor: placing ? 'crosshair' : 'grab',
-          transition: 'border-color 0.15s',
-        }}
-      >
-        {placing && (
-          <div className="absolute z-10 w-full flex justify-center mt-2 pointer-events-none" style={{ position: 'absolute' }}>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full shadow" style={{ background: '#2D5A3D', color: 'white' }}>
-              Cliquez sur la carte pour placer le spot
-            </span>
-          </div>
-        )}
+      {/* Zone carte */}
+      <div className="relative rounded-xl overflow-hidden" style={{
+        height: 300,
+        border: placing ? '2px solid #2D5A3D' : '1.5px solid var(--color-border-mid)',
+        transition: 'border-color 0.15s',
+      }}>
         <Map
           defaultCenter={hasPin ? { lat: latitude, lng: longitude } : MAP_CENTER}
           defaultZoom={hasPin ? 13 : MAP_ZOOM}
@@ -120,13 +107,14 @@ function MapPicker({ latitude, longitude, onChange }) {
           gestureHandling="greedy"
           disableDefaultUI
           zoomControl
-          onClick={handleClick}
           style={{ width: '100%', height: '100%' }}
         >
-          {hasPin && (
+          <MapCenterRef mapRef={mapRef} />
+          {/* Pin existant (hors mode placement) */}
+          {hasPin && !placing && (
             <HtmlMarker position={{ lat: latitude, lng: longitude }}>
               <div style={{
-                width: 24, height: 24, borderRadius: '50% 50% 50% 0',
+                width: 22, height: 22, borderRadius: '50% 50% 50% 0',
                 background: '#2D5A3D', border: '2px solid white',
                 transform: 'translate(-50%, -100%) rotate(-45deg)',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
@@ -134,14 +122,73 @@ function MapPicker({ latitude, longitude, onChange }) {
             </HtmlMarker>
           )}
         </Map>
+
+        {/* Pin central flottant (mode placement) */}
+        {placing && (
+          <div
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            style={{ zIndex: 10 }}
+          >
+            {/* Ombre au sol */}
+            <div style={{
+              position: 'absolute',
+              width: 12, height: 6,
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.25)',
+              transform: 'translateY(14px)',
+            }} />
+            {/* Pin */}
+            <svg width="32" height="40" viewBox="0 0 32 40" style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))', transform: 'translateY(-4px)' }}>
+              <path d="M16 0C9.373 0 4 5.373 4 12c0 9 12 28 12 28S28 21 28 12C28 5.373 22.627 0 16 0z" fill="#2D5A3D"/>
+              <circle cx="16" cy="12" r="5" fill="white"/>
+            </svg>
+          </div>
+        )}
+
+        {/* Bandeau instruction (mode placement) */}
+        {placing && (
+          <div className="pointer-events-none absolute top-2 left-0 right-0 flex justify-center" style={{ zIndex: 11 }}>
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full shadow-md" style={{ background: '#2D5A3D', color: 'white' }}>
+              Déplace la carte sous le pin
+            </span>
+          </div>
+        )}
       </div>
-      {hasPin ? (
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez "Placer le spot" pour repositionner
-        </p>
+
+      {/* Boutons */}
+      {placing ? (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+            style={{ background: '#2D5A3D' }}
+          >
+            Valider cette position
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+          >
+            Annuler
+          </button>
+        </div>
       ) : (
+        <button
+          type="button"
+          onClick={() => setPlacing(true)}
+          className="self-start flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+          style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+        >
+          {hasPin ? '✏️ Repositionner' : '📍 Placer le spot'}
+        </button>
+      )}
+
+      {hasPin && !placing && (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Activez le mode placement puis cliquez sur la carte.
+          {latitude.toFixed(5)}, {longitude.toFixed(5)}
         </p>
       )}
     </div>
