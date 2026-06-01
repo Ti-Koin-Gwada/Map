@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useClientMap } from '../hooks/useClientMap.js'
 import MapView from '../components/map/MapView.jsx'
-import PoiDrawer from '../components/poi/PoiDrawer.jsx'
 import { CATEGORIES } from '../lib/constants.js'
+import { X, MapPin, Navigation, Instagram } from 'lucide-react'
 
-// ── Logo feuille ─────────────────────────────────────────────
 function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block', flexShrink: 0 }}>
@@ -15,34 +14,152 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
   )
 }
 
-// ── Légende catégories ────────────────────────────────────────
-function Legend({ pois }) {
-  const usedCats = [...new Set(pois.map(p => p.category))]
+// ── Panel haut-gauche : légende ou fiche spot ─────────────────
+function InfoPanel({ pois, selectedPoi, customNote, onClose }) {
+  const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
+  const gmapsUrl = selectedPoi
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
+    : null
+  const instaUrl = selectedPoi?.instagram_url
+    ? selectedPoi.instagram_url.startsWith('http')
+      ? selectedPoi.instagram_url
+      : `https://www.instagram.com/${selectedPoi.instagram_url.replace('@', '')}`
+    : null
+
   return (
     <div
-      className="bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3.5 shadow-sm"
-      style={{ border: '1px solid var(--color-border)' }}
+      className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col overflow-hidden"
+      style={{
+        border: '1px solid var(--color-border)',
+        width: 300,
+        maxHeight: 'calc(100vh - 100px)',
+        transition: 'all 0.25s ease',
+      }}
     >
-      <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'var(--color-text-muted)' }}>
-        Vos {pois.length} spots
-      </p>
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-        {usedCats.map(key => {
-          const cat = CATEGORIES[key]
-          if (!cat) return null
-          return (
-            <span key={key} className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-primary)' }}>
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat.color, boxShadow: '0 0 0 2px rgba(255,255,255,0.7)' }} />
-              {cat.label}
-            </span>
-          )
-        })}
-      </div>
+      {selectedPoi ? (
+        <>
+          {/* Photo */}
+          <div style={{ height: 150, flexShrink: 0, overflow: 'hidden', position: 'relative', background: cat ? `linear-gradient(135deg, ${cat.color}22, ${cat.color}08)` : '#F3F1E8' }}>
+            {selectedPoi.image_url
+              ? <img src={selectedPoi.image_url} alt={selectedPoi.name} className="w-full h-full object-cover" />
+              : <div className="w-full h-full" />
+            }
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-white/90 shadow"
+            >
+              <X size={13} color="var(--color-forest-dark)" />
+            </button>
+          </div>
+
+          {/* Infos scrollables */}
+          <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2">
+            {cat && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cat.color }}>
+                <span className="w-2 h-2 rounded-full" style={{ background: cat.color }} /> {cat.label}
+              </span>
+            )}
+            <h3 className="font-serif italic font-semibold text-xl leading-tight" style={{ color: 'var(--color-forest-dark)' }}>
+              {selectedPoi.name}
+            </h3>
+            {selectedPoi.address && (
+              <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                <MapPin size={11} /> {selectedPoi.address}
+              </p>
+            )}
+            {selectedPoi.description && (
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                {selectedPoi.description}
+              </p>
+            )}
+            {(selectedPoi.access || selectedPoi.duration || selectedPoi.difficulty) && (
+              <div className="rounded-xl overflow-hidden text-xs" style={{ border: '1px solid var(--color-border)' }}>
+                {selectedPoi.access && (
+                  <div className="flex justify-between px-3 py-2" style={{ borderBottom: (selectedPoi.duration || selectedPoi.difficulty) ? '1px solid var(--color-border)' : 'none' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Accès</span>
+                    <span style={{ color: 'var(--color-text-primary)' }}>{selectedPoi.access}</span>
+                  </div>
+                )}
+                {selectedPoi.duration && (
+                  <div className="flex justify-between px-3 py-2" style={{ borderBottom: selectedPoi.difficulty ? '1px solid var(--color-border)' : 'none' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Durée</span>
+                    <span style={{ color: 'var(--color-text-primary)' }}>{selectedPoi.duration}</span>
+                  </div>
+                )}
+                {selectedPoi.difficulty && (
+                  <div className="flex justify-between px-3 py-2">
+                    <span style={{ color: 'var(--color-text-muted)' }}>Difficulté</span>
+                    <span style={{ color: 'var(--color-text-primary)' }}>{selectedPoi.difficulty}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {customNote && (
+              <div className="rounded-xl p-3" style={{ background: '#FBF6E3', border: '1px solid #EBDFB0' }}>
+                <p className="font-serif italic font-semibold text-sm mb-1" style={{ color: '#8A6D1F' }}>💬 Note de Flo</p>
+                <p className="text-sm leading-relaxed" style={{ color: '#5C4A14' }}>{customNote}</p>
+              </div>
+            )}
+            {selectedPoi.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedPoi.tags.map(tag => (
+                  <span key={tag} className="px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* CTA */}
+          <div className="flex gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <a
+              href={gmapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold text-white"
+              style={{ background: 'var(--color-forest)' }}
+            >
+              <Navigation size={14} /> Y aller
+            </a>
+            {instaUrl && (
+              <a
+                href={instaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)' }}
+              >
+                <Instagram size={14} />
+              </a>
+            )}
+          </div>
+        </>
+      ) : (
+        /* Légende */
+        <div className="px-4 py-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'var(--color-text-muted)' }}>
+            Vos {pois.length} spots
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {[...new Set(pois.map(p => p.category))].map(key => {
+              const c = CATEGORIES[key]
+              if (!c) return null
+              return (
+                <span key={key} className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                  {c.label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// ── Page 404 ──────────────────────────────────────────────────
 function Page404() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--color-bg)' }}>
@@ -53,14 +170,13 @@ function Page404() {
           Cette carte n'existe pas
         </h1>
         <p className="text-base leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-          Le lien semble incorrect ou la carte a été supprimée. Vérifiez l'adresse auprès de la personne qui vous l'a partagée.
+          Le lien semble incorrect ou la carte a été supprimée.
         </p>
       </div>
     </div>
   )
 }
 
-// ── Page 403 ──────────────────────────────────────────────────
 function Page403() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--color-bg)' }}>
@@ -71,117 +187,19 @@ function Page403() {
           Carte indisponible
         </h1>
         <p className="text-base leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-          Cette carte a été désactivée par son auteur. Contactez Flo pour qu'elle la réactive.
+          Cette carte a été désactivée. Contactez Flo pour qu'elle la réactive.
         </p>
       </div>
     </div>
   )
 }
 
-// ── Bottom-sheet mobile ───────────────────────────────────────
-function BottomSheet({ poi, customNote, onClose }) {
-  const [expanded, setExpanded] = useState(false)
-
-  if (!poi) return null
-
-  return (
-    <div
-      className="absolute left-0 right-0 bottom-0 z-20 transition-transform duration-400"
-      style={{ transform: 'translateY(0)' }}
-    >
-      <div
-        className="rounded-t-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-400"
-        style={{
-          background: 'white',
-          height: expanded ? '85vh' : 'auto',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setExpanded(e => !e)}
-          className="w-full flex justify-center pt-3 pb-1 flex-shrink-0"
-        >
-          <span className="w-10 h-1.5 rounded-full" style={{ background: 'var(--color-border-mid)' }} />
-        </button>
-
-        {expanded ? (
-          <div className="flex-1 min-h-0">
-            <PoiDrawer
-              poi={poi}
-              customNote={customNote}
-              onClose={() => { setExpanded(false); onClose() }}
-              isMobile
-            />
-          </div>
-        ) : (
-          <div className="px-5 pb-6" onClick={() => setExpanded(true)}>
-            <div className="flex items-start gap-4">
-              <div>
-                {CATEGORIES[poi.category] && (
-                  <span className="flex items-center gap-1.5 text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                    <span className="w-2 h-2 rounded-full" style={{ background: CATEGORIES[poi.category].color }} />
-                    {CATEGORIES[poi.category].label}
-                  </span>
-                )}
-                <h3
-                  className="font-serif italic font-semibold text-2xl leading-tight"
-                  style={{ color: 'var(--color-forest-dark)' }}
-                >
-                  {poi.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onClose() }}
-                className="ml-auto w-7 h-7 flex items-center justify-center rounded-full flex-shrink-0 mt-1"
-                style={{ background: 'var(--color-border)' }}
-              >
-                ×
-              </button>
-            </div>
-            {customNote && (
-              <div className="mt-3 p-3 rounded-xl text-sm" style={{ background: '#FBF6E3', border: '1px solid #EBDFB0', color: '#5C4A14' }}>
-                <span className="font-serif italic font-semibold" style={{ color: '#8A6D1F' }}>💬 Note de Flo ·</span> {customNote}
-              </div>
-            )}
-            <div className="flex gap-2 mt-3">
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex-1 py-2.5 text-sm font-semibold text-center rounded-xl text-white"
-                style={{ background: 'var(--color-forest)' }}
-              >
-                Y aller →
-              </a>
-              {poi.instagram_url && (
-                <a
-                  href={poi.instagram_url?.startsWith('http') ? poi.instagram_url : `https://www.instagram.com/${poi.instagram_url?.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="px-4 py-2.5 text-sm font-semibold text-center rounded-xl"
-                  style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)' }}
-                >
-                  Insta
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Page principale ───────────────────────────────────────────
 export default function ClientMapPage() {
   const { slug } = useParams()
   const { map, pois, loading, is404, is403, error } = useClientMap(slug)
   const [selectedId, setSelectedId] = useState(null)
-  const selectedPoi   = pois.find(p => p.id === selectedId)
-  const selectedNote  = map?.notes?.[selectedId]
+  const selectedPoi  = pois.find(p => p.id === selectedId)
+  const selectedNote = map?.notes?.[selectedId]
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
@@ -212,62 +230,31 @@ export default function ClientMapPage() {
         )}
       </nav>
 
-      {/* Map + UI */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Carte */}
-        <div className="flex-1 relative min-w-0">
-          <MapView
+      {/* Carte plein écran */}
+      <div className="flex-1 relative min-h-0">
+        <MapView
+          pois={pois}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+
+        {/* Panel haut-gauche */}
+        {pois.length > 0 && (
+          <InfoPanel
             pois={pois}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
+            selectedPoi={selectedPoi}
+            customNote={selectedNote}
+            onClose={() => setSelectedId(null)}
           />
+        )}
 
-          {/* Légende */}
-          {pois.length > 0 && (
-            <div className="absolute top-4 left-4 z-10 max-w-[280px]">
-              <Legend pois={pois} />
-            </div>
-          )}
-
-          {/* Watermark */}
-          <div
-            className="absolute bottom-4 left-4 flex items-center gap-1.5 z-10 text-xs tracking-widest uppercase font-mono"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
-            <LeafMark size={13} color="var(--color-text-muted)" />
-            Carte · Guadeloupe
-          </div>
-
-          {/* Bottom sheet mobile */}
-          <div className="sm:hidden">
-            <BottomSheet
-              poi={selectedPoi}
-              customNote={selectedNote}
-              onClose={() => setSelectedId(null)}
-            />
-          </div>
-        </div>
-
-        {/* Drawer desktop */}
+        {/* Watermark */}
         <div
-          className="hidden sm:block absolute top-0 right-0 bottom-0 z-10"
-          style={{
-            width: 420,
-            maxWidth: '92%',
-            background: 'white',
-            borderLeft: '1px solid var(--color-border)',
-            boxShadow: '-18px 0 50px -28px rgba(26,46,32,0.4)',
-            transform: selectedPoi ? 'translateX(0)' : 'translateX(102%)',
-            transition: 'transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1)',
-          }}
+          className="absolute bottom-4 left-4 flex items-center gap-1.5 z-10 text-xs tracking-widest uppercase font-mono"
+          style={{ color: 'var(--color-text-muted)' }}
         >
-          {selectedPoi && (
-            <PoiDrawer
-              poi={selectedPoi}
-              customNote={selectedNote}
-              onClose={() => setSelectedId(null)}
-            />
-          )}
+          <LeafMark size={13} color="var(--color-text-muted)" />
+          Carte · Guadeloupe
         </div>
       </div>
     </div>
