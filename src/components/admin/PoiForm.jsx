@@ -6,7 +6,7 @@ import GeocoderInput from './GeocoderInput.jsx'
 import Button from '../ui/Button.jsx'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
-const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID
+const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID || 'DEMO_MAP_ID'
 
 const GEO_TABS = [
   { id: 'address', label: 'Adresse',      icon: MapPin },
