@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Copy, Check, ExternalLink } from 'lucide-react'
 import MapSelector from './MapSelector.jsx'
-import { FORFAIT_OPTIONS } from '../../lib/constants.js'
 import Button from '../ui/Button.jsx'
 
 function StepBar({ step, setStep }) {
@@ -72,32 +71,6 @@ function Step1({ form, setForm, onNext }) {
             style={{ border: '1.5px solid var(--color-border-mid)', background: 'white', color: 'var(--color-text-primary)' }}
           />
         </label>
-
-        <div>
-          <span className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-forest-dark)' }}>
-            Forfait
-          </span>
-          <div className="grid grid-cols-2 gap-3">
-            {FORFAIT_OPTIONS.map(f => (
-              <div
-                key={f.value}
-                onClick={() => set('forfait', f.value)}
-                className="p-4 rounded-xl cursor-pointer transition-all"
-                style={{
-                  background: 'white',
-                  border: `1.5px solid ${form.forfait === f.value ? 'var(--color-forest)' : 'var(--color-border-mid)'}`,
-                }}
-              >
-                <p className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
-                  {f.label}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                  {f.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
 
         <label className="block">
           <span className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--color-forest-dark)' }}>
@@ -209,7 +182,7 @@ function Step3({ form, chosen, pois, slug, onBack }) {
   )
 }
 
-const INITIAL_FORM = { client_name: '', forfait: 'personnalise', notes: '' }
+const INITIAL_FORM = { client_name: '', notes: '' }
 
 export default function ClientMapForm({ pois = [], onSave, onCancel, saving, createdSlug }) {
   const [step, setStep]     = useState(1)
