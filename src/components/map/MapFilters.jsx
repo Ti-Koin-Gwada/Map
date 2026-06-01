@@ -4,14 +4,14 @@ import Chip from '../ui/Chip.jsx'
 export default function MapFilters({ activeFilter, onChange }) {
   return (
     <div
-      className="flex gap-2 px-4 pb-3"
-      style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+      className="flex gap-1.5 px-4 pb-2.5"
+      style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      <style>{`.map-filters-scroll::-webkit-scrollbar { display: none; }`}</style>
       <Chip
         label="Tous"
         selected={activeFilter === 'all'}
         onClick={() => onChange('all')}
+        small
       />
       {Object.entries(CATEGORIES).map(([key, cat]) => (
         <Chip
@@ -20,6 +20,7 @@ export default function MapFilters({ activeFilter, onChange }) {
           color={cat.color}
           selected={activeFilter === key}
           onClick={() => onChange(key)}
+          small
         />
       ))}
     </div>

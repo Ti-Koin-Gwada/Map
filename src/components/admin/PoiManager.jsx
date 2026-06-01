@@ -333,54 +333,50 @@ export default function PoiManager() {
   if (isMobile) {
     return (
       <>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 flex-shrink-0">
-          <div>
-            <h1 className="font-serif italic font-semibold text-2xl" style={{ color: 'var(--color-forest-dark)' }}>
-              Mes spots
-            </h1>
-            {!loading && (
-              <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                {pois.length} spot{pois.length !== 1 ? 's' : ''} dans la base
-              </p>
-            )}
+        {/* Header + Tabs + Filters compactés */}
+        <div className="flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <div className="flex items-center justify-between px-4 pt-2.5 pb-2">
+            <div className="flex items-center gap-2">
+              <h1 className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
+                Mes spots
+              </h1>
+              {!loading && (
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  · {pois.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Tabs inline */}
+              {[
+                { id: 'map',  label: 'Carte',  icon: Map },
+                { id: 'list', label: 'Liste',  icon: List },
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMobileTab(id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: mobileTab === id ? 'var(--color-forest)' : 'var(--color-border)',
+                    color: mobileTab === id ? 'white' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <Icon size={13} /> {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={openCreate}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-white shadow-sm flex-shrink-0"
+                style={{ background: 'var(--color-forest)' }}
+              >
+                <Plus size={17} />
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm"
-            style={{ background: 'var(--color-forest)' }}
-          >
-            <Plus size={16} /> Ajouter
-          </button>
-        </div>
 
-        {/* Tabs */}
-        <div
-          className="flex px-4 pb-3 gap-2 flex-shrink-0"
-          style={{ borderBottom: '1px solid var(--color-border)' }}
-        >
-          {[
-            { id: 'map',  label: 'Carte',  icon: Map },
-            { id: 'list', label: 'Liste',  icon: List },
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setMobileTab(id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{
-                background: mobileTab === id ? 'var(--color-forest)' : 'var(--color-border)',
-                color: mobileTab === id ? 'white' : 'var(--color-text-secondary)',
-              }}
-            >
-              <Icon size={15} /> {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filters (always visible) */}
-        <div className="pt-3 flex-shrink-0">
+          {/* Filters */}
           <MapFilters activeFilter={filter} onChange={setFilter} />
         </div>
 
