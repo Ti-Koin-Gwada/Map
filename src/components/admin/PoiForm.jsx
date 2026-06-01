@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { MapPin, Crosshair, Hand } from 'lucide-react'
 import { Map } from '@vis.gl/react-google-maps'
 import { CATEGORIES, TAG_OPTIONS, MAP_CENTER, MAP_ZOOM } from '../../lib/constants.js'
@@ -55,10 +55,21 @@ function Textarea({ value, onChange, placeholder, rows = 3 }) {
 
 // ── Carte cliquable pour placer un point ────────────────────
 function MapPicker({ latitude, longitude, onChange }) {
+  const [placing, setPlacing] = useState(false)
+
   const handleClick = useCallback((e) => {
+    if (!placing) return
     if (!e.detail?.latLng) return
     onChange(e.detail.latLng.lat, e.detail.latLng.lng)
-  }, [onChange])
+    setPlacing(false)
+  }, [placing, onChange])
+
+  useEffect(() => {
+    if (!placing) return
+    const onKey = (e) => { if (e.key === 'Escape') setPlacing(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [placing])
 
   const hasPin = latitude != null && longitude != null
 
@@ -72,10 +83,36 @@ function MapPicker({ latitude, longitude, onChange }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Bouton d'activation du mode placement */}
+      <button
+        type="button"
+        onClick={() => setPlacing(p => !p)}
+        className="self-start flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+        style={{
+          background: placing ? '#2D5A3D' : 'var(--color-border)',
+          color: placing ? 'white' : 'var(--color-text-secondary)',
+          border: placing ? '1.5px solid #2D5A3D' : '1.5px solid transparent',
+        }}
+      >
+        <span>{placing ? '✕ Annuler' : '📍 Placer le spot'}</span>
+      </button>
+
       <div
         className="rounded-xl overflow-hidden"
-        style={{ height: 280, border: '1.5px solid var(--color-border-mid)', cursor: 'crosshair' }}
+        style={{
+          height: 280,
+          border: placing ? '2px solid #2D5A3D' : '1.5px solid var(--color-border-mid)',
+          cursor: placing ? 'crosshair' : 'grab',
+          transition: 'border-color 0.15s',
+        }}
       >
+        {placing && (
+          <div className="absolute z-10 w-full flex justify-center mt-2 pointer-events-none" style={{ position: 'absolute' }}>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full shadow" style={{ background: '#2D5A3D', color: 'white' }}>
+              Cliquez sur la carte pour placer le spot
+            </span>
+          </div>
+        )}
         <Map
           defaultCenter={hasPin ? { lat: latitude, lng: longitude } : MAP_CENTER}
           defaultZoom={hasPin ? 13 : MAP_ZOOM}
@@ -100,11 +137,11 @@ function MapPicker({ latitude, longitude, onChange }) {
       </div>
       {hasPin ? (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez ailleurs pour déplacer
+          {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez "Placer le spot" pour repositionner
         </p>
       ) : (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Cliquez sur la carte pour placer le spot.
+          Activez le mode placement puis cliquez sur la carte.
         </p>
       )}
     </div>

@@ -9,9 +9,9 @@ export default function Button({
     lg: 'px-6 py-4 text-base',
   }
   const variants = {
-    primary:  'bg-[--color-forest] text-white hover:bg-[--color-forest-dark] shadow-sm',
-    secondary:'bg-white text-[--color-text-primary] border border-[--color-border-mid] hover:bg-[--color-bg]',
-    ghost:    'text-[--color-text-secondary] hover:bg-[--color-border]',
+    primary:  'bg-[var(--color-forest)] text-white hover:bg-[var(--color-forest-dark)] shadow-sm',
+    secondary:'bg-white text-[var(--color-text-primary)] border border-[var(--color-border-mid)] hover:bg-[var(--color-bg)]',
+    ghost:    'text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]',
     danger:   'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100',
   }
 
