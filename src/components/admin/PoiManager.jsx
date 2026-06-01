@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plus, Edit2, Trash2, MapPin, Navigation, Instagram, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Edit2, Trash2, MapPin, Navigation, Instagram, X, MoreVertical } from 'lucide-react'
 import { usePois } from '../../hooks/usePois.js'
 import { useToast } from '../ui/Toast.jsx'
 import MapView from '../map/MapView.jsx'
@@ -22,42 +22,96 @@ function SpotPhoto({ poi }) {
   )
 }
 
-function Toggle({ on, onChange }) {
+function SpotMenu({ poi, onEdit, onDelete }) {
+  const [open, setOpen]       = useState(false)
+  const [confirm, setConfirm] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (!ref.current?.contains(e.target)) { setOpen(false); setConfirm(false) } }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!on)}
-      className="relative w-10 h-5 rounded-full flex-shrink-0 transition-colors"
-      style={{ background: on ? 'var(--color-forest)' : '#CBD5C9' }}
-    >
-      <span
-        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
-        style={{ left: on ? '22px' : '2px' }}
-      />
-    </button>
+    <div ref={ref} className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setConfirm(false) }}
+        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+        style={{ color: 'var(--color-text-muted)', background: open ? 'var(--color-border)' : 'transparent' }}
+      >
+        <MoreVertical size={15} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-8 z-30 rounded-xl shadow-lg overflow-hidden"
+          style={{ background: 'white', border: '1px solid var(--color-border)', minWidth: 160 }}
+        >
+          {confirm ? (
+            <div className="px-3 py-2.5 flex flex-col gap-2">
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                Supprimer ce spot ?
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { onDelete(poi.id); setOpen(false) }}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white"
+                  style={{ background: '#DC2626' }}
+                >
+                  Confirmer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirm(false)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => { onEdit(poi); setOpen(false) }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors hover:bg-[var(--color-bg)]"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                <Edit2 size={13} /> Modifier
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirm(true)}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors hover:bg-red-50"
+                style={{ color: '#DC2626', borderTop: '1px solid var(--color-border)' }}
+              >
+                <Trash2 size={13} /> Supprimer
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
 export default function PoiManager() {
   const { pois, loading, create, update, remove } = usePois()
   const toast = useToast()
-  const [filter, setFilter]   = useState('all')
+  const [filter, setFilter]         = useState('all')
   const [selectedId, setSelectedId] = useState(null)
-  const [modalMode, setModalMode]   = useState(null) // 'create' | 'edit'
+  const [modalMode, setModalMode]   = useState(null)
   const [editingPoi, setEditingPoi] = useState(null)
   const [saving, setSaving]         = useState(false)
   const [popoverId, setPopoverId]   = useState(null)
 
   const shown = filter === 'all' ? pois : pois.filter(p => p.category === filter)
   const selectedPoi = shown.find(p => p.id === selectedId)
-
-  const handleToggleActive = async (poi) => {
-    try {
-      await update.mutateAsync({ id: poi.id, is_active: !poi.is_active })
-    } catch {
-      toast('Erreur lors de la mise à jour', 'error')
-    }
-  }
 
   const handleSave = async (data) => {
     setSaving(true)
@@ -268,7 +322,11 @@ export default function PoiManager() {
                       {poi.address || poi.category}
                     </p>
                   </div>
-                  <Toggle on={poi.is_active} onChange={() => handleToggleActive(poi)} />
+                  <SpotMenu
+                    poi={poi}
+                    onEdit={(p) => { setEditingPoi(p); setModalMode('edit') }}
+                    onDelete={handleDelete}
+                  />
                 </div>
               ))}
             </div>
