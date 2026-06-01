@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { MapPin, Crosshair } from 'lucide-react'
 import { CATEGORIES, TAG_OPTIONS } from '../../lib/constants.js'
 import GeocoderInput from './GeocoderInput.jsx'
+import ImageUpload from './ImageUpload.jsx'
 import Button from '../ui/Button.jsx'
 
 const GEO_TABS = [
@@ -171,9 +172,9 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
         <Input value={form.instagram_url} onChange={v => set('instagram_url', v)} placeholder="@ti.koin.gwada ou URL" />
       </Field>
 
-      {/* URL image */}
-      <Field label="Photo (URL ou lien Supabase Storage)">
-        <Input value={form.image_url} onChange={v => set('image_url', v)} placeholder="https://…" />
+      {/* Photo */}
+      <Field label="Photo">
+        <ImageUpload value={form.image_url} onChange={v => set('image_url', v)} />
       </Field>
 
       {/* Tags */}
