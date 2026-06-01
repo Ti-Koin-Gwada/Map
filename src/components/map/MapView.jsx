@@ -5,6 +5,7 @@ import MarkerPin from './MarkerPin.jsx'
 import { useRef, useState, useLayoutEffect } from 'react'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
+const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID
 
 const MAP_STYLES_CLEAN = [
   { featureType: 'poi',          elementType: 'labels', stylers: [{ visibility: 'off' }] },
@@ -56,6 +57,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
         defaultCenter={MAP_CENTER}
         defaultZoom={MAP_ZOOM}
         mapTypeId={mapType}
+        mapId={GOOGLE_MAP_ID}
         gestureHandling="greedy"
         disableDefaultUI={false}
         mapTypeControl={false}

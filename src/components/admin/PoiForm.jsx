@@ -6,6 +6,7 @@ import GeocoderInput from './GeocoderInput.jsx'
 import Button from '../ui/Button.jsx'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
+const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID
 
 const GEO_TABS = [
   { id: 'address', label: 'Adresse',      icon: MapPin },
@@ -84,6 +85,7 @@ function MapPicker({ latitude, longitude, onChange }) {
           defaultCenter={hasPin ? { lat: latitude, lng: longitude } : MAP_CENTER}
           defaultZoom={hasPin ? 13 : MAP_ZOOM}
           mapTypeId="terrain"
+          mapId={GOOGLE_MAP_ID}
           gestureHandling="greedy"
           disableDefaultUI
           zoomControl
