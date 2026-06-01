@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
 import { MapPin, Crosshair, Hand } from 'lucide-react'
-import { Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { Map } from '@vis.gl/react-google-maps'
 import { CATEGORIES, TAG_OPTIONS, MAP_CENTER, MAP_ZOOM } from '../../lib/constants.js'
 import GeocoderInput from './GeocoderInput.jsx'
+import HtmlMarker from '../map/HtmlMarker.jsx'
 import Button from '../ui/Button.jsx'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
-const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID || 'DEMO_MAP_ID'
 
 const GEO_TABS = [
   { id: 'address', label: 'Adresse',      icon: MapPin },
@@ -60,11 +60,6 @@ function MapPicker({ latitude, longitude, onChange }) {
     onChange(e.detail.latLng.lat, e.detail.latLng.lng)
   }, [onChange])
 
-  const handleDragEnd = useCallback((e) => {
-    if (!e.latLng) return
-    onChange(e.latLng.lat(), e.latLng.lng())
-  }, [onChange])
-
   const hasPin = latitude != null && longitude != null
 
   if (!GOOGLE_MAPS_KEY) {
@@ -85,7 +80,6 @@ function MapPicker({ latitude, longitude, onChange }) {
           defaultCenter={hasPin ? { lat: latitude, lng: longitude } : MAP_CENTER}
           defaultZoom={hasPin ? 13 : MAP_ZOOM}
           mapTypeId="terrain"
-          mapId={GOOGLE_MAP_ID}
           gestureHandling="greedy"
           disableDefaultUI
           zoomControl
@@ -93,21 +87,24 @@ function MapPicker({ latitude, longitude, onChange }) {
           style={{ width: '100%', height: '100%' }}
         >
           {hasPin && (
-            <AdvancedMarker
-              position={{ lat: latitude, lng: longitude }}
-              draggable
-              onDragEnd={handleDragEnd}
-            />
+            <HtmlMarker position={{ lat: latitude, lng: longitude }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50% 50% 50% 0',
+                background: '#2D5A3D', border: '2px solid white',
+                transform: 'translate(-50%, -100%) rotate(-45deg)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+              }} />
+            </HtmlMarker>
           )}
         </Map>
       </div>
       {hasPin ? (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          📍 {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez ailleurs pour déplacer
+          {latitude.toFixed(5)}, {longitude.toFixed(5)} — cliquez ailleurs pour déplacer
         </p>
       ) : (
         <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-          Cliquez sur la carte pour placer le spot. Le marqueur est ensuite déplaçable.
+          Cliquez sur la carte pour placer le spot.
         </p>
       )}
     </div>

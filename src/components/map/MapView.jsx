@@ -1,11 +1,11 @@
-import { Map, AdvancedMarker } from '@vis.gl/react-google-maps'
+import { Map } from '@vis.gl/react-google-maps'
 import { MAP_CENTER, MAP_ZOOM, CATEGORIES } from '../../lib/constants.js'
 import GuadeloupeSVG, { VB } from './GuadeloupeSVG.jsx'
 import MarkerPin from './MarkerPin.jsx'
+import HtmlMarker from './HtmlMarker.jsx'
 import { useRef, useState, useLayoutEffect } from 'react'
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
-const GOOGLE_MAP_ID   = import.meta.env.VITE_GOOGLE_MAP_ID || 'DEMO_MAP_ID'
 
 const MAP_STYLES_CLEAN = [
   { featureType: 'poi',          elementType: 'labels', stylers: [{ visibility: 'off' }] },
@@ -57,7 +57,6 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
         defaultCenter={MAP_CENTER}
         defaultZoom={MAP_ZOOM}
         mapTypeId={mapType}
-        mapId={GOOGLE_MAP_ID}
         gestureHandling="greedy"
         disableDefaultUI={false}
         mapTypeControl={false}
@@ -72,7 +71,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
           const isSelected = selectedId === poi.id
           const isChosen   = chosenIds?.includes(poi.id)
           return (
-            <AdvancedMarker
+            <HtmlMarker
               key={poi.id}
               position={{ lat: poi.latitude, lng: poi.longitude }}
             >
@@ -86,7 +85,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
                 onClick={() => selectionMode ? onToggle?.(poi.id) : onSelect?.(poi.id)}
                 style={{ position: 'relative', transform: 'translate(-50%, -100%)' }}
               />
-            </AdvancedMarker>
+            </HtmlMarker>
           )
         })}
       </Map>
