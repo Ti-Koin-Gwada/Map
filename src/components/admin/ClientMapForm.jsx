@@ -2,9 +2,51 @@ import { useState } from 'react'
 import { Copy, Check, ExternalLink } from 'lucide-react'
 import MapSelector from './MapSelector.jsx'
 import Button from '../ui/Button.jsx'
+import { useIsMobile } from '../../hooks/useIsMobile.js'
 
 function StepBar({ step, setStep }) {
   const steps = ['Infos client', 'Sélection', 'Confirmation']
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return (
+      <div className="flex items-center justify-center gap-2 px-4 pb-4 flex-shrink-0">
+        {steps.map((label, i) => {
+          const n = i + 1, on = step === n, done = step > n
+          return (
+            <div key={label} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => done && setStep(n)}
+                className="flex items-center gap-1.5"
+                style={{ background: 'none', border: 'none', cursor: done ? 'pointer' : 'default' }}
+              >
+                <span
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+                  style={{
+                    background: on || done ? 'var(--color-forest)' : 'var(--color-surface)',
+                    color: on || done ? 'white' : 'var(--color-text-muted)',
+                    border: `1.5px solid ${on || done ? 'var(--color-forest)' : 'var(--color-border-mid)'}`,
+                  }}
+                >
+                  {done ? '✓' : n}
+                </span>
+                {on && (
+                  <span className="text-sm font-semibold" style={{ color: 'var(--color-forest-dark)' }}>
+                    {label}
+                  </span>
+                )}
+              </button>
+              {i < 2 && (
+                <span className="flex-shrink-0 w-5 h-px" style={{ background: 'var(--color-border-mid)' }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center gap-3 px-7 pb-5 flex-shrink-0">
       {steps.map((label, i) => {
@@ -189,6 +231,7 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
   const [form, setForm]     = useState(INITIAL_FORM)
   const [chosen, setChosen] = useState([])
   const [notes, setNotes]   = useState({})
+  const isMobile = useIsMobile()
 
   const handleSave = () => {
     onSave({
@@ -204,30 +247,58 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <div className="px-7 pt-6 pb-4 flex-shrink-0 flex items-end justify-between">
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-serif italic font-semibold text-3xl" style={{ color: 'var(--color-forest-dark)' }}>
-            {form.client_name || 'Nouvelle carte'}
-          </h1>
-          {form.client_name && (
-            <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              {chosen.length} spots sélectionnés
-            </span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onCancel}>Annuler</Button>
+      {isMobile ? (
+        <div className="px-4 pt-4 pb-3 flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="font-serif italic font-semibold text-xl" style={{ color: 'var(--color-forest-dark)' }}>
+              {form.client_name || 'Nouvelle carte'}
+            </h1>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-sm px-3 py-1.5 rounded-lg"
+              style={{ color: 'var(--color-text-muted)', background: 'var(--color-border)' }}
+            >
+              Annuler
+            </button>
+          </div>
           {step === 2 && (
             <Button
               variant="primary"
               disabled={chosen.length === 0 || saving}
               onClick={handleSave}
+              className="w-full"
             >
-              {saving ? 'Génération…' : 'Générer la carte →'}
+              {saving ? 'Génération…' : `Générer la carte (${chosen.length} spots) →`}
             </Button>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="px-7 pt-6 pb-4 flex-shrink-0 flex items-end justify-between">
+          <div className="flex items-baseline gap-3">
+            <h1 className="font-serif italic font-semibold text-3xl" style={{ color: 'var(--color-forest-dark)' }}>
+              {form.client_name || 'Nouvelle carte'}
+            </h1>
+            {form.client_name && (
+              <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                {chosen.length} spots sélectionnés
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onCancel}>Annuler</Button>
+            {step === 2 && (
+              <Button
+                variant="primary"
+                disabled={chosen.length === 0 || saving}
+                onClick={handleSave}
+              >
+                {saving ? 'Génération…' : 'Générer la carte →'}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <StepBar step={createdSlug ? 3 : step} setStep={setStep} />
 

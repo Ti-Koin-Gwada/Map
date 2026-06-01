@@ -3,7 +3,11 @@ import Chip from '../ui/Chip.jsx'
 
 export default function MapFilters({ activeFilter, onChange }) {
   return (
-    <div className="flex flex-wrap gap-2 px-7 pb-4">
+    <div
+      className="flex gap-2 px-4 pb-3"
+      style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+    >
+      <style>{`.map-filters-scroll::-webkit-scrollbar { display: none; }`}</style>
       <Chip
         label="Tous"
         selected={activeFilter === 'all'}

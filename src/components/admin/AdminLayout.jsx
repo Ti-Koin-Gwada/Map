@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { MapPin, Map, LogOut } from 'lucide-react'
 import { useAdmin } from '../../hooks/useAdmin.js'
+import { useIsMobile } from '../../hooks/useIsMobile.js'
 
 function LeafMark() {
   return (
@@ -45,13 +46,81 @@ function SidebarItem({ to, icon: Icon, label }) {
   )
 }
 
+function BottomNavItem({ to, icon: Icon, label }) {
+  return (
+    <NavLink
+      to={to}
+      className="flex-1 flex flex-col items-center justify-center gap-1 py-2 transition-colors"
+      style={({ isActive }) => ({
+        color: isActive ? 'var(--color-forest)' : 'var(--color-text-muted)',
+      })}
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
+          <span className="text-xs font-semibold">{label}</span>
+        </>
+      )}
+    </NavLink>
+  )
+}
+
 export default function AdminLayout({ children }) {
   const { logout } = useAdmin()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const handleLogout = () => {
     logout()
     navigate('/admin', { replace: true })
+  }
+
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col" style={{ background: 'var(--color-bg)' }}>
+        {/* Top header mobile */}
+        <header
+          className="flex items-center justify-between px-4 h-14 flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
+        >
+          <div className="flex items-center gap-2">
+            <LeafMark />
+            <span className="font-serif italic font-semibold text-base" style={{ color: 'var(--color-forest-dark)' }}>
+              Ti Koin Gwada
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg"
+            style={{ color: 'var(--color-text-muted)', background: 'var(--color-border)' }}
+          >
+            <LogOut size={13} />
+            Déco
+          </button>
+        </header>
+
+        {/* Main content */}
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden" style={{ paddingBottom: 'var(--bottom-nav-h)' }}>
+          {children}
+        </main>
+
+        {/* Bottom nav */}
+        <nav
+          className="fixed bottom-0 left-0 right-0 flex z-40"
+          style={{
+            background: 'rgba(255,255,255,0.97)',
+            borderTop: '1px solid var(--color-border)',
+            height: 'var(--bottom-nav-h)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <BottomNavItem to="/admin/spots"  icon={MapPin} label="Spots" />
+          <BottomNavItem to="/admin/cartes" icon={Map}    label="Cartes" />
+        </nav>
+      </div>
+    )
   }
 
   return (
@@ -61,28 +130,19 @@ export default function AdminLayout({ children }) {
         className="w-60 flex-shrink-0 flex flex-col py-6 px-4"
         style={{ borderRight: '1px solid var(--color-border)', background: 'var(--color-surface)' }}
       >
-        {/* Logo */}
         <div className="flex items-center gap-2.5 px-2 mb-7">
           <LeafMark />
-          <span
-            className="font-serif italic font-semibold text-lg"
-            style={{ color: 'var(--color-forest-dark)' }}
-          >
+          <span className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
             Ti Koin Gwada
           </span>
         </div>
 
-        {/* Nav */}
         <nav className="flex flex-col gap-1">
           <SidebarItem to="/admin/spots"  icon={MapPin} label="Mes spots"  />
           <SidebarItem to="/admin/cartes" icon={Map}    label="Mes cartes" />
         </nav>
 
-        {/* Pied de sidebar */}
-        <div
-          className="mt-auto pt-4 flex items-center justify-between"
-          style={{ borderTop: '1px solid var(--color-border)' }}
-        >
+        <div className="mt-auto pt-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--color-border)' }}>
           <div className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-full flex-shrink-0"
@@ -102,7 +162,6 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Contenu */}
       <main className="flex-1 flex flex-col min-w-0 min-h-0">
         {children}
       </main>

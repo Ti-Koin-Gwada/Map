@@ -60,6 +60,11 @@ body {
   border-radius: 99px;
 }
 
+/* ── Mobile safe area ───────────────────────────────────── */
+:root {
+  --bottom-nav-h: 64px;
+}
+
 /* ── Textarea base ──────────────────────────────────────── */
 textarea {
   resize: vertical;
