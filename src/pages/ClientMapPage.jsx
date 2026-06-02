@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useClientMap } from '../hooks/useClientMap.js'
 import { useIsMobile } from '../hooks/useIsMobile.js'
 import MapView from '../components/map/MapView.jsx'
+import Chip from '../components/ui/Chip.jsx'
 import { CATEGORIES } from '../lib/constants.js'
 import { X, MapPin, Navigation, Instagram, BookOpen, Route } from 'lucide-react'
 
@@ -623,47 +624,27 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
   )
 }
 
-/* ── Mobile legend pill ───────────────────────────────────── */
-function MobileLegend({ pois, categories, filteredCount, filterCat, onToggle }) {
-  const activeLabel = filterCat ? categories.find(c => c.key === filterCat)?.label : null
-
+/* ── Mobile filter bar ────────────────────────────────────── */
+function MobileFilterBar({ categories, filterCat, onToggle }) {
+  if (categories.length <= 1) return null
   return (
     <div
-      className="absolute bottom-4 left-1/2 z-10 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg"
-      style={{
-        transform: 'translateX(-50%)',
-        background: 'rgba(255,255,255,0.97)',
-        border: '1px solid var(--color-border)',
-        backdropFilter: 'blur(8px)',
-      }}
+      className="absolute top-0 left-0 right-0 z-10 pt-2 pb-3"
+      style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.92) 60%, transparent 100%)' }}
     >
-      <LeafMark size={14} />
-      <span className="text-xs font-semibold" style={{ color: 'var(--color-forest-dark)' }}>
-        {filterCat ? `${filteredCount} / ${pois.length}` : `${pois.length} spots`}
-      </span>
-      {activeLabel && (
-        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-          · {activeLabel}
-        </span>
-      )}
-      <span className="w-px h-3 mx-0.5" style={{ background: 'var(--color-border-mid)' }} />
-      <div className="flex gap-1.5">
+      <div
+        className="flex gap-1.5 px-3"
+        style={{ overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none' }}
+      >
+        <Chip label="Tous" selected={filterCat === null} onClick={() => onToggle(null)} small />
         {categories.map(c => (
-          <button
+          <Chip
             key={c.key}
-            type="button"
-            aria-label={`Filtrer ${c.label}`}
-            aria-pressed={filterCat === c.key}
+            label={c.label}
+            color={c.color}
+            selected={filterCat === c.key}
             onClick={() => onToggle(c.key)}
-            className="rounded-full transition-all"
-            style={{
-              width: filterCat === c.key ? 14 : 10,
-              height: filterCat === c.key ? 14 : 10,
-              background: c.color,
-              opacity: filterCat === null || filterCat === c.key ? 1 : 0.3,
-              outline: filterCat === c.key ? `2px solid ${c.color}` : 'none',
-              outlineOffset: 2,
-            }}
+            small
           />
         ))}
       </div>
@@ -821,6 +802,13 @@ export default function ClientMapPage() {
 
         {isMobile ? (
           <>
+            {!itineraryOpen && (
+              <MobileFilterBar
+                categories={categories}
+                filterCat={filterCat}
+                onToggle={toggleFilter}
+              />
+            )}
             {itineraryOpen && (
               <ItinerarySheet
                 itineraryPois={itineraryPois}
@@ -836,15 +824,6 @@ export default function ClientMapPage() {
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
                 onOpenMenu={setMenuSrc}
-              />
-            )}
-            {!itineraryOpen && !selectedPoi && pois.length > 0 && (
-              <MobileLegend
-                pois={pois}
-                categories={categories}
-                filteredCount={filteredPois.length}
-                filterCat={filterCat}
-                onToggle={toggleFilter}
               />
             )}
           </>

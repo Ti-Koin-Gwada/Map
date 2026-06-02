@@ -143,36 +143,34 @@ describe('Filtre par catégorie — desktop', () => {
   })
 })
 
-// ── Filtre — mobile (MobileLegend) ────────────────────────────
+// ── Filtre — mobile (MobileFilterBar) ─────────────────────────
 
 describe('Filtre par catégorie — mobile', () => {
   beforeEach(() => {
     useIsMobile.mockReturnValue(true)
   })
 
-  it('affiche les dots de filtre dans MobileLegend', () => {
+  it('affiche les chips de filtre dans MobileFilterBar', () => {
     renderPage()
-    expect(screen.getByRole('button', { name: /Filtrer Plages/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Filtrer Restaurants/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Tous$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Plages/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Restaurants/i })).toBeInTheDocument()
   })
 
-  it('affiche le count total au départ', () => {
-    renderPage()
-    expect(screen.getByText('3 spots')).toBeInTheDocument()
-  })
-
-  it('affiche "X / Y" et le nom de la catégorie quand le filtre est actif', async () => {
-    renderPage()
-    await userEvent.click(screen.getByRole('button', { name: /Filtrer Plages/i }))
-    expect(screen.getByText('2 / 3')).toBeInTheDocument()
-    expect(screen.getByText(/Plages/i)).toBeInTheDocument()
-  })
-
-  it('filtre les markers sur la carte depuis MobileLegend', async () => {
+  it('filtre les markers au clic d\'une catégorie', async () => {
     renderPage()
     const mapView = screen.getByTestId('map-view')
-    await userEvent.click(screen.getByRole('button', { name: /Filtrer Restaurants/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Restaurants/i }))
     expect(mapView.dataset.count).toBe('1')
+  })
+
+  it('"Tous" réinitialise le filtre actif', async () => {
+    renderPage()
+    const mapView = screen.getByTestId('map-view')
+    await userEvent.click(screen.getByRole('button', { name: /Plages/i }))
+    expect(mapView.dataset.count).toBe('2')
+    await userEvent.click(screen.getByRole('button', { name: /^Tous$/i }))
+    expect(mapView.dataset.count).toBe('3')
   })
 })
 
