@@ -4,7 +4,7 @@ import { useClientMap } from '../hooks/useClientMap.js'
 import { useIsMobile } from '../hooks/useIsMobile.js'
 import MapView from '../components/map/MapView.jsx'
 import { CATEGORIES } from '../lib/constants.js'
-import { X, MapPin, Navigation, Instagram, BookOpen } from 'lucide-react'
+import { X, MapPin, Navigation, Instagram, BookOpen, Route } from 'lucide-react'
 
 function MenuViewer({ src, onClose }) {
   useEffect(() => {
@@ -47,8 +47,203 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
   )
 }
 
+/* ── Itinerary panel desktop ──────────────────────────────── */
+function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClose }) {
+  return (
+    <div
+      className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col overflow-hidden"
+      style={{ border: '1px solid var(--color-border)', width: 300, maxHeight: 'calc(100vh - 100px)' }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--color-border)' }}>
+        <div className="flex items-center gap-2">
+          <Route size={14} color="var(--color-forest)" />
+          <span className="font-serif italic font-semibold text-base" style={{ color: 'var(--color-forest-dark)' }}>
+            Itinéraire
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+            style={{ background: 'var(--color-forest)', color: 'white' }}>
+            {itineraryPois.length} étapes
+          </span>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Fermer l'itinéraire"
+          className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ background: 'var(--color-border)' }}>
+          <X size={13} color="var(--color-text-secondary)" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto tk-scroll px-3 py-3 flex flex-col gap-2">
+        {itineraryPois.map((poi, i) => {
+          const cat = CATEGORIES[poi.category]
+          const customNote = notes?.[poi.id]
+          const isExpanded = expandedId === poi.id
+          const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+          return (
+            <button
+              key={poi.id}
+              type="button"
+              onClick={() => onExpandStep(isExpanded ? null : poi.id)}
+              className="w-full text-left rounded-xl transition-all"
+              style={{
+                border: `1.5px solid ${isExpanded ? cat?.color || 'var(--color-forest)' : 'var(--color-border)'}`,
+                background: isExpanded ? (cat?.bgLight || 'var(--color-surface)') : 'white',
+                overflow: 'hidden',
+              }}
+            >
+              <div className="flex items-center gap-2.5 px-3 py-2.5">
+                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
+                <span className="flex-1 font-serif italic font-semibold text-sm truncate"
+                  style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
+              </div>
+              {isExpanded && (
+                <div className="px-3 pb-3 flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
+                  {poi.address && (
+                    <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      <MapPin size={11} /> {poi.address}
+                    </p>
+                  )}
+                  {poi.description && (
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      {poi.description}
+                    </p>
+                  )}
+                  {poi.flo_reco && (
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
+                      🌿 {poi.flo_reco}
+                    </p>
+                  )}
+                  {customNote && (
+                    <p className="text-xs leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
+                  )}
+                  <a
+                    href={gmapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white mt-1"
+                    style={{ background: 'var(--color-forest)' }}
+                  >
+                    <Navigation size={12} /> Y aller
+                  </a>
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ── Itinerary sheet mobile ───────────────────────────────── */
+function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClose }) {
+  if (!itineraryPois.length) return null
+  return (
+    <div
+      className="absolute inset-0 z-20 flex flex-col justify-end"
+      style={{ background: 'rgba(26,46,32,0.3)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="bg-white flex flex-col overflow-hidden"
+        style={{ borderRadius: '20px 20px 0 0', maxHeight: '85dvh', borderTop: '1px solid var(--color-border)' }}
+      >
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full" style={{ background: 'var(--color-border-mid)' }} />
+        </div>
+        <div className="flex items-center justify-between px-5 py-2 flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <div className="flex items-center gap-2">
+            <Route size={15} color="var(--color-forest)" />
+            <span className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
+              Itinéraire
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: 'var(--color-forest)', color: 'white' }}>
+              {itineraryPois.length} étapes
+            </span>
+            <button type="button" onClick={onClose} aria-label="Fermer l'itinéraire"
+              className="w-8 h-8 flex items-center justify-center rounded-full"
+              style={{ background: 'var(--color-border)' }}>
+              <X size={15} color="var(--color-text-secondary)" />
+            </button>
+          </div>
+        </div>
+        <div
+          className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2"
+          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        >
+          {itineraryPois.map((poi, i) => {
+            const cat = CATEGORIES[poi.category]
+            const customNote = notes?.[poi.id]
+            const isExpanded = expandedId === poi.id
+            const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+            return (
+              <button
+                key={poi.id}
+                type="button"
+                onClick={() => onExpandStep(isExpanded ? null : poi.id)}
+                className="w-full text-left rounded-xl transition-all"
+                style={{
+                  border: `1.5px solid ${isExpanded ? cat?.color || 'var(--color-forest)' : 'var(--color-border)'}`,
+                  background: isExpanded ? (cat?.bgLight || 'var(--color-surface)') : 'white',
+                  overflow: 'hidden',
+                }}
+              >
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
+                  <span className="flex-1 font-serif italic font-semibold text-base truncate"
+                    style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
+                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4 flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+                    {poi.address && (
+                      <p className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                        <MapPin size={13} /> {poi.address}
+                      </p>
+                    )}
+                    {poi.description && (
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {poi.description}
+                      </p>
+                    )}
+                    {poi.flo_reco && (
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
+                        🌿 {poi.flo_reco}
+                      </p>
+                    )}
+                    {customNote && (
+                      <p className="text-sm leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
+                    )}
+                    <a
+                      href={gmapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold mt-1"
+                      style={{ background: 'var(--color-forest)' }}
+                    >
+                      <Navigation size={16} /> Y aller (Google Maps)
+                    </a>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Desktop panel haut-gauche ────────────────────────────── */
-function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle, routeStep, totalSteps }) {
+function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle }) {
   const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
   const gmapsUrl = selectedPoi
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
@@ -108,11 +303,6 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
             {cat && (
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cat.color }}>
                 <span className="w-2 h-2 rounded-full" style={{ background: cat.color }} /> {cat.label}
-              </span>
-            )}
-            {routeStep && (
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-                Étape {routeStep} / {totalSteps}
               </span>
             )}
             <h3 className="font-serif italic font-semibold text-xl leading-tight" style={{ color: 'var(--color-forest-dark)' }}>
@@ -238,7 +428,7 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
 }
 
 /* ── Mobile bottom sheet ──────────────────────────────────── */
-function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu, routeStep, totalSteps }) {
+function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
   if (!poi) return null
   const cat = CATEGORIES[poi.category]
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
@@ -298,11 +488,6 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu, routeStep, tota
 
         {/* Contenu scrollable */}
         <div className="flex-1 overflow-y-auto tk-scroll px-5 py-4 flex flex-col gap-3">
-          {routeStep && (
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-              Étape {routeStep} / {totalSteps}
-            </span>
-          )}
           <h2
             className="font-serif italic font-semibold text-2xl leading-tight"
             style={{ color: 'var(--color-forest-dark)' }}
@@ -519,9 +704,11 @@ function Page403() {
 export default function ClientMapPage() {
   const { slug } = useParams()
   const { map, pois, loading, is404, is403, error } = useClientMap(slug)
-  const [selectedId, setSelectedId] = useState(null)
-  const [menuSrc, setMenuSrc]       = useState(null)
-  const [filterCat, setFilterCat]   = useState(null)
+  const [selectedId, setSelectedId]         = useState(null)
+  const [menuSrc, setMenuSrc]               = useState(null)
+  const [filterCat, setFilterCat]           = useState(null)
+  const [itineraryOpen, setItineraryOpen]   = useState(false)
+  const [expandedStepId, setExpandedStepId] = useState(null)
   const isMobile = useIsMobile()
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
@@ -536,9 +723,27 @@ export default function ClientMapPage() {
       .filter(c => c.label),
     [pois]
   )
-  const routeStep = map?.show_route && selectedPoi
-    ? pois.findIndex(p => p.id === selectedPoi.id) + 1
-    : null
+  const itineraryPois = useMemo(
+    () => pois.filter(p => p.itinerary_order != null)
+      .sort((a, b) => a.itinerary_order - b.itinerary_order),
+    [pois]
+  )
+  const hasItinerary = !!map?.show_route && itineraryPois.length >= 2
+
+  const handleSelect = (id) => {
+    const poi = pois.find(p => p.id === id)
+    if (hasItinerary && poi?.itinerary_order != null) {
+      setItineraryOpen(true)
+      setExpandedStepId(id)
+      setSelectedId(null)
+      setMenuSrc(null)
+    } else {
+      setSelectedId(id)
+      setMenuSrc(null)
+      setItineraryOpen(false)
+      setExpandedStepId(null)
+    }
+  }
 
   const toggleFilter = (cat) => {
     const next = filterCat === cat ? null : cat
@@ -547,6 +752,11 @@ export default function ClientMapPage() {
       setSelectedId(null)
       setMenuSrc(null)
     }
+  }
+
+  const closeItinerary = () => {
+    setItineraryOpen(false)
+    setExpandedStepId(null)
   }
 
   if (loading) return (
@@ -598,26 +808,31 @@ export default function ClientMapPage() {
         <MapView
           pois={filteredPois}
           selectedId={selectedId}
-          onSelect={(id) => { setSelectedId(id); setMenuSrc(null) }}
-          showRoute={!!map?.show_route}
-          routePois={filteredPois}
+          onSelect={handleSelect}
+          showRoute={hasItinerary}
+          routePois={itineraryPois}
         />
 
         {isMobile ? (
           <>
-            {/* Bottom sheet quand un spot est sélectionné */}
-            {selectedPoi && (
+            {itineraryOpen && (
+              <ItinerarySheet
+                itineraryPois={itineraryPois}
+                notes={map?.notes}
+                expandedId={expandedStepId}
+                onExpandStep={setExpandedStepId}
+                onClose={closeItinerary}
+              />
+            )}
+            {!itineraryOpen && selectedPoi && (
               <MobileSpotSheet
                 poi={selectedPoi}
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
                 onOpenMenu={setMenuSrc}
-                routeStep={routeStep}
-                totalSteps={pois.length}
               />
             )}
-            {/* Pill légende quand aucun spot n'est sélectionné */}
-            {!selectedPoi && pois.length > 0 && (
+            {!itineraryOpen && !selectedPoi && pois.length > 0 && (
               <MobileLegend
                 pois={pois}
                 categories={categories}
@@ -629,7 +844,16 @@ export default function ClientMapPage() {
           </>
         ) : (
           <>
-            {pois.length > 0 && (
+            {itineraryOpen && (
+              <ItineraryPanel
+                itineraryPois={itineraryPois}
+                notes={map?.notes}
+                expandedId={expandedStepId}
+                onExpandStep={setExpandedStepId}
+                onClose={closeItinerary}
+              />
+            )}
+            {!itineraryOpen && pois.length > 0 && (
               <InfoPanel
                 pois={pois}
                 categories={categories}
@@ -640,8 +864,6 @@ export default function ClientMapPage() {
                 onOpenMenu={setMenuSrc}
                 filterCat={filterCat}
                 onToggle={toggleFilter}
-                routeStep={routeStep}
-                totalSteps={pois.length}
               />
             )}
             {/* Watermark desktop */}

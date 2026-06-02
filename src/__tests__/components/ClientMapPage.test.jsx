@@ -193,70 +193,96 @@ describe('Reco de Flo', () => {
   })
 })
 
-// ── Tracé de route ───────────────────────────────────────────
+// ── Itinéraire ────────────────────────────────────────────────
 
-describe('Tracé de route', () => {
+// Fixtures avec itinerary_order : PLAGE_1=étape1, RESTO_1=étape2, PLAGE_2=spot normal
+const PLAGE_1_IT  = { ...PLAGE_1, itinerary_order: 0 }
+const RESTO_1_IT  = { ...RESTO_1, itinerary_order: 1 }
+const PLAGE_2_REG = { ...PLAGE_2, itinerary_order: null }
+
+function makeItineraryMap() {
+  return {
+    map: { client_name: 'Alice', notes: {}, show_route: true },
+    pois: [PLAGE_1_IT, RESTO_1_IT, PLAGE_2_REG],
+    loading: false, is404: false, is403: false, error: null,
+  }
+}
+
+describe('Itinéraire', () => {
   beforeEach(() => {
-    useClientMap.mockReturnValue({
-      ...makeMap(),
-      map: { client_name: 'Alice', notes: {}, show_route: true },
-    })
+    useClientMap.mockReturnValue(makeItineraryMap())
     useIsMobile.mockReturnValue(false)
   })
 
-  it('passe showRoute=true au MapView quand map.show_route=true', () => {
+  it('passe showRoute=true au MapView quand map.show_route=true et itinéraire >= 2 spots', () => {
     renderPage()
     expect(screen.getByTestId('map-view').dataset.showRoute).toBe('true')
   })
 
-  it('passe showRoute=false au MapView quand map.show_route est absent', () => {
-    useClientMap.mockReturnValue(makeMap())
+  it('passe showRoute=false quand map.show_route=false', () => {
+    useClientMap.mockReturnValue({
+      ...makeItineraryMap(),
+      map: { client_name: 'Alice', notes: {} },
+    })
     renderPage()
     expect(screen.getByTestId('map-view').dataset.showRoute).toBe('false')
   })
 
-  it('passe routePois avec le bon nombre de spots', () => {
+  it('passe routePois avec uniquement les spots de l\'itinéraire (2)', () => {
     renderPage()
-    // no filter active → routePois = all 3 pois
-    expect(screen.getByTestId('map-view').dataset.routeCount).toBe('3')
-  })
-
-  it('routePois suit le filtre actif', async () => {
-    renderPage()
-    await userEvent.click(screen.getByRole('button', { name: /Plages/i }))
-    // filter "plage" → 2 plages visibles → routePois = 2
     expect(screen.getByTestId('map-view').dataset.routeCount).toBe('2')
   })
 
-  it('affiche "Étape 1 / 3" quand le premier spot est sélectionné', async () => {
+  it('ouvre le panneau Itinéraire quand on clique un spot de l\'itinéraire', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.getByText('Étape 1 / 3')).toBeInTheDocument()
+    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    expect(screen.getByText('2 étapes')).toBeInTheDocument()
   })
 
-  it('affiche "Étape 3 / 3" pour le dernier spot', async () => {
+  it('affiche les deux étapes dans le panneau', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    // marker mock + panneau → plusieurs occurrences possibles, on vérifie que c'est >= 1
+    expect(screen.getAllByText('Plage du Gosier').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Chez Marcel').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('développe le détail d\'une étape au clic', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-resto-1'))
-    expect(screen.getByText('Étape 3 / 3')).toBeInTheDocument()
+    // RESTO_1 est l'étape 2 — elle est déjà expanded (c'est le spot cliqué)
+    expect(screen.getByText('5 rue des Flamboyants')).toBeInTheDocument()
+    expect(screen.getByText('Cuisine créole.')).toBeInTheDocument()
   })
 
-  it("n'affiche pas le badge Étape quand show_route=false", async () => {
-    useClientMap.mockReturnValue(makeMap())
+  it("n'ouvre pas le panneau itinéraire pour un spot régulier", async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-2'))
+    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
+    // Le panneau normal s'ouvre
+    expect(screen.getByRole('heading', { name: 'Plage Caravelle' })).toBeInTheDocument()
+  })
+
+  it('ferme le panneau itinéraire au clic sur le bouton ×', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.queryByText(/Étape/)).not.toBeInTheDocument()
+    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Fermer l.itin/i }))
+    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
   })
 
-  it("n'affiche pas le badge Étape quand aucun spot n'est sélectionné", () => {
-    renderPage()
-    expect(screen.queryByText(/Étape/)).not.toBeInTheDocument()
-  })
-
-  it('affiche le badge Étape dans MobileSpotSheet sur mobile', async () => {
+  it('affiche le panneau itinéraire sur mobile (ItinerarySheet)', async () => {
     useIsMobile.mockReturnValue(true)
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.getByText('Étape 1 / 3')).toBeInTheDocument()
+    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    expect(screen.getByText('2 étapes')).toBeInTheDocument()
+  })
+
+  it('ne montre pas le panneau itinéraire quand aucun spot n\'est cliqué', () => {
+    renderPage()
+    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
   })
 })
 

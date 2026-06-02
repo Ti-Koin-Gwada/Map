@@ -227,21 +227,24 @@ function Step3({ form, chosen, pois, slug, onBack }) {
 const INITIAL_FORM = { client_name: '', notes: '' }
 
 export default function ClientMapForm({ pois = [], onSave, onCancel, saving, createdSlug }) {
-  const [step, setStep]         = useState(1)
-  const [form, setForm]         = useState(INITIAL_FORM)
-  const [chosen, setChosen]     = useState([])
-  const [notes, setNotes]       = useState({})
-  const [showRoute, setShowRoute] = useState(false)
+  const [step, setStep]           = useState(1)
+  const [form, setForm]           = useState(INITIAL_FORM)
+  const [chosen, setChosen]       = useState([])
+  const [notes, setNotes]         = useState({})
+  const [itinerary, setItinerary] = useState([])
   const isMobile = useIsMobile()
 
-  const handleSave = () => {
+  const handleSave = (withItinerary = false) => {
+    const itineraryOrder = withItinerary
+      ? Object.fromEntries(itinerary.map((id, i) => [id, i]))
+      : {}
     onSave({
       ...form,
-      show_route: showRoute && chosen.length >= 2,
-      pois: chosen.map((id, i) => ({
-        poi_id:      id,
-        custom_note: notes[id] || null,
-        display_order: i,
+      show_route: withItinerary && itinerary.length >= 2,
+      pois: chosen.map((id) => ({
+        poi_id:        id,
+        custom_note:   notes[id] || null,
+        display_order: itineraryOrder[id] ?? null,
       })),
     })
   }
@@ -265,14 +268,26 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
             </button>
           </div>
           {step === 2 && (
-            <Button
-              variant="primary"
-              disabled={chosen.length === 0 || saving}
-              onClick={handleSave}
-              className="w-full"
-            >
-              {saving ? 'Génération…' : `Générer la carte (${chosen.length} spots) →`}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
+                disabled={chosen.length === 0 || saving}
+                onClick={() => handleSave(false)}
+                className="w-full"
+              >
+                {saving ? 'Génération…' : `Générer (${chosen.length} spots) →`}
+              </Button>
+              {itinerary.length >= 2 && (
+                <Button
+                  variant="primary"
+                  disabled={saving}
+                  onClick={() => handleSave(true)}
+                  className="w-full"
+                >
+                  {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       ) : (
@@ -290,13 +305,24 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onCancel}>Annuler</Button>
             {step === 2 && (
-              <Button
-                variant="primary"
-                disabled={chosen.length === 0 || saving}
-                onClick={handleSave}
-              >
-                {saving ? 'Génération…' : 'Générer la carte →'}
-              </Button>
+              <>
+                <Button
+                  variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
+                  disabled={chosen.length === 0 || saving}
+                  onClick={() => handleSave(false)}
+                >
+                  {saving ? 'Génération…' : 'Générer la carte →'}
+                </Button>
+                {itinerary.length >= 2 && (
+                  <Button
+                    variant="primary"
+                    disabled={saving}
+                    onClick={() => handleSave(true)}
+                  >
+                    {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -316,8 +342,8 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
           notes={notes}
           onNotesChange={setNotes}
           totalPois={pois.length}
-          showRoute={showRoute}
-          onShowRouteChange={setShowRoute}
+          itinerary={itinerary}
+          onItineraryChange={setItinerary}
         />
       )}
     </div>

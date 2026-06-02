@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
   for (const link of links ?? []) {
     if (!link.pois) continue
-    pois.push(link.pois)
+    pois.push({ ...link.pois, itinerary_order: link.display_order })
     if (link.custom_note) notes[link.pois.id] = link.custom_note
   }
 
