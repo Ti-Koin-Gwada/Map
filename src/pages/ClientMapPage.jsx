@@ -48,7 +48,7 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
 }
 
 /* ── Desktop panel haut-gauche ────────────────────────────── */
-function InfoPanel({ pois, selectedPoi, customNote, onClose, onOpenMenu }) {
+function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle }) {
   const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
   const gmapsUrl = selectedPoi
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
@@ -80,6 +80,28 @@ function InfoPanel({ pois, selectedPoi, customNote, onClose, onOpenMenu }) {
               className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-white/90 shadow">
               <X size={13} color="var(--color-forest-dark)" />
             </button>
+          </div>
+
+          {/* Filter strip — accessible depuis la vue détail */}
+          <div className="flex flex-wrap gap-1.5 px-4 py-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            {categories.map(c => {
+              const active = filterCat === c.key
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => onToggle(c.key)}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-all"
+                  style={{
+                    background: active ? c.color : 'var(--color-border)',
+                    color: active ? 'white' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: active ? 'rgba(255,255,255,0.7)' : c.color }} />
+                  {c.label}
+                </button>
+              )
+            })}
           </div>
 
           <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2">
@@ -181,17 +203,26 @@ function InfoPanel({ pois, selectedPoi, customNote, onClose, onOpenMenu }) {
       ) : (
         <div className="px-4 py-3.5">
           <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'var(--color-text-muted)' }}>
-            Vos {pois.length} spots
+            {filterCat ? `${filteredCount} sur ${pois.length} spots` : `Vos ${pois.length} spots`}
           </p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {[...new Set(pois.map(p => p.category))].map(key => {
-              const c = CATEGORIES[key]
-              if (!c) return null
+          <div className="flex flex-wrap gap-2">
+            {categories.map(c => {
+              const active = filterCat === c.key
               return (
-                <span key={key} className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => onToggle(c.key)}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-all"
+                  style={{
+                    background: active ? c.color : 'var(--color-border)',
+                    color: active ? 'white' : 'var(--color-text-secondary)',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: active ? 'rgba(255,255,255,0.8)' : c.color }} />
                   {c.label}
-                </span>
+                </button>
               )
             })}
           </div>
@@ -392,8 +423,9 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
 }
 
 /* ── Mobile legend pill ───────────────────────────────────── */
-function MobileLegend({ pois }) {
-  const cats = [...new Set(pois.map(p => p.category))].map(k => CATEGORIES[k]).filter(Boolean)
+function MobileLegend({ pois, categories, filteredCount, filterCat, onToggle }) {
+  const activeLabel = filterCat ? categories.find(c => c.key === filterCat)?.label : null
+
   return (
     <div
       className="absolute bottom-4 left-1/2 z-10 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg"
@@ -406,12 +438,32 @@ function MobileLegend({ pois }) {
     >
       <LeafMark size={14} />
       <span className="text-xs font-semibold" style={{ color: 'var(--color-forest-dark)' }}>
-        {pois.length} spots
+        {filterCat ? `${filteredCount} / ${pois.length}` : `${pois.length} spots`}
       </span>
+      {activeLabel && (
+        <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+          · {activeLabel}
+        </span>
+      )}
       <span className="w-px h-3 mx-0.5" style={{ background: 'var(--color-border-mid)' }} />
-      <div className="flex gap-1">
-        {cats.map(c => (
-          <span key={c.label} className="w-2.5 h-2.5 rounded-full" style={{ background: c.color }} />
+      <div className="flex gap-1.5">
+        {categories.map(c => (
+          <button
+            key={c.key}
+            type="button"
+            aria-label={`Filtrer ${c.label}`}
+            aria-pressed={filterCat === c.key}
+            onClick={() => onToggle(c.key)}
+            className="rounded-full transition-all"
+            style={{
+              width: filterCat === c.key ? 14 : 10,
+              height: filterCat === c.key ? 14 : 10,
+              background: c.color,
+              opacity: filterCat === null || filterCat === c.key ? 1 : 0.3,
+              outline: filterCat === c.key ? `2px solid ${c.color}` : 'none',
+              outlineOffset: 2,
+            }}
+          />
         ))}
       </div>
     </div>
@@ -458,11 +510,25 @@ export default function ClientMapPage() {
   const { slug } = useParams()
   const { map, pois, loading, is404, is403, error } = useClientMap(slug)
   const [selectedId, setSelectedId] = useState(null)
-  const [menuSrc, setMenuSrc] = useState(null)
+  const [menuSrc, setMenuSrc]       = useState(null)
+  const [filterCat, setFilterCat]   = useState(null)
   const isMobile = useIsMobile()
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
   const selectedNote = map?.notes?.[selectedId]
+  const filteredPois = filterCat ? pois.filter(p => p.category === filterCat) : pois
+  const categories   = [...new Set(pois.map(p => p.category))]
+    .map(k => ({ key: k, ...CATEGORIES[k] }))
+    .filter(c => c.label)
+
+  const toggleFilter = (cat) => {
+    const next = filterCat === cat ? null : cat
+    setFilterCat(next)
+    if (next && selectedPoi && selectedPoi.category !== next) {
+      setSelectedId(null)
+      setMenuSrc(null)
+    }
+  }
 
   if (loading) return (
     <div className="h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
@@ -511,7 +577,7 @@ export default function ClientMapPage() {
       {/* Carte plein écran */}
       <div className="flex-1 relative min-h-0">
         <MapView
-          pois={pois}
+          pois={filteredPois}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setMenuSrc(null) }}
         />
@@ -529,7 +595,13 @@ export default function ClientMapPage() {
             )}
             {/* Pill légende quand aucun spot n'est sélectionné */}
             {!selectedPoi && pois.length > 0 && (
-              <MobileLegend pois={pois} />
+              <MobileLegend
+                pois={pois}
+                categories={categories}
+                filteredCount={filteredPois.length}
+                filterCat={filterCat}
+                onToggle={toggleFilter}
+              />
             )}
           </>
         ) : (
@@ -537,10 +609,14 @@ export default function ClientMapPage() {
             {pois.length > 0 && (
               <InfoPanel
                 pois={pois}
+                categories={categories}
+                filteredCount={filteredPois.length}
                 selectedPoi={selectedPoi}
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
                 onOpenMenu={setMenuSrc}
+                filterCat={filterCat}
+                onToggle={toggleFilter}
               />
             )}
             {/* Watermark desktop */}
