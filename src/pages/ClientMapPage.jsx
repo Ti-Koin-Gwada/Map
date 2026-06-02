@@ -1,10 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useClientMap } from '../hooks/useClientMap.js'
 import { useIsMobile } from '../hooks/useIsMobile.js'
 import MapView from '../components/map/MapView.jsx'
 import { CATEGORIES } from '../lib/constants.js'
-import { X, MapPin, Navigation, Instagram } from 'lucide-react'
+import { X, MapPin, Navigation, Instagram, BookOpen } from 'lucide-react'
+
+function MenuViewer({ src, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.88)' }}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+      >
+        <X size={20} color="white" />
+      </button>
+      <img
+        src={src}
+        alt="Carte du menu"
+        className="max-w-full object-contain"
+        style={{ padding: '48px 16px 16px', maxHeight: 'calc(100dvh - 64px)' }}
+        onClick={(e) => e.stopPropagation()}
+        onError={onClose}
+      />
+    </div>
+  )
+}
 
 function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
   return (
@@ -16,7 +48,7 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
 }
 
 /* ── Desktop panel haut-gauche ────────────────────────────── */
-function InfoPanel({ pois, selectedPoi, customNote, onClose }) {
+function InfoPanel({ pois, selectedPoi, customNote, onClose, onOpenMenu }) {
   const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
   const gmapsUrl = selectedPoi
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
@@ -91,9 +123,21 @@ function InfoPanel({ pois, selectedPoi, customNote, onClose }) {
                 )}
               </div>
             )}
+            {selectedPoi.flo_reco && (
+              <div className="rounded-xl p-3" style={{ background: 'rgba(45,90,61,0.06)', border: '1px solid rgba(45,90,61,0.18)' }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span>🌿</span>
+                  <span className="font-serif italic font-semibold text-sm" style={{ color: 'var(--color-forest-dark)' }}>Reco de Flo</span>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{selectedPoi.flo_reco}</p>
+              </div>
+            )}
             {customNote && (
               <div className="rounded-xl p-3" style={{ background: '#FBF6E3', border: '1px solid #EBDFB0' }}>
-                <p className="font-serif italic font-semibold text-sm mb-1" style={{ color: '#8A6D1F' }}>💬 Note de Flo</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span>💬</span>
+                  <span className="font-serif italic font-semibold text-sm" style={{ color: '#8A6D1F' }}>Note de Flo</span>
+                </div>
                 <p className="text-sm leading-relaxed" style={{ color: '#5C4A14' }}>{customNote}</p>
               </div>
             )}
@@ -114,6 +158,17 @@ function InfoPanel({ pois, selectedPoi, customNote, onClose }) {
               style={{ background: 'var(--color-forest)' }}>
               <Navigation size={14} /> Y aller
             </a>
+            {selectedPoi.menu_url && (
+              <button
+                type="button"
+                aria-label="Voir la carte du menu"
+                onClick={() => onOpenMenu?.(selectedPoi.menu_url)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)' }}
+              >
+                <BookOpen size={14} />
+              </button>
+            )}
             {instaUrl && (
               <a href={instaUrl} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold"
@@ -147,7 +202,7 @@ function InfoPanel({ pois, selectedPoi, customNote, onClose }) {
 }
 
 /* ── Mobile bottom sheet ──────────────────────────────────── */
-function MobileSpotSheet({ poi, customNote, onClose }) {
+function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
   if (!poi) return null
   const cat = CATEGORIES[poi.category]
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
@@ -253,6 +308,17 @@ function MobileSpotSheet({ poi, customNote, onClose }) {
             </div>
           )}
 
+          {poi.flo_reco && (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(45,90,61,0.06)', border: '1px solid rgba(45,90,61,0.18)' }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span>🌿</span>
+                <span className="font-serif italic font-semibold text-base" style={{ color: 'var(--color-forest-dark)' }}>
+                  Reco de Flo
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{poi.flo_reco}</p>
+            </div>
+          )}
           {customNote && (
             <div className="rounded-xl p-4" style={{ background: '#FBF6E3', border: '1px solid #EBDFB0' }}>
               <div className="flex items-center gap-2 mb-1.5">
@@ -296,6 +362,17 @@ function MobileSpotSheet({ poi, customNote, onClose }) {
             <Navigation size={18} />
             Y aller (Google Maps)
           </a>
+          {poi.menu_url && (
+            <button
+              type="button"
+              onClick={() => onOpenMenu?.(poi.menu_url)}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-semibold text-sm"
+              style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'white' }}
+            >
+              <BookOpen size={16} />
+              Voir la carte du menu
+            </button>
+          )}
           {instaUrl && (
             <a
               href={instaUrl}
@@ -381,6 +458,7 @@ export default function ClientMapPage() {
   const { slug } = useParams()
   const { map, pois, loading, is404, is403, error } = useClientMap(slug)
   const [selectedId, setSelectedId] = useState(null)
+  const [menuSrc, setMenuSrc] = useState(null)
   const isMobile = useIsMobile()
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
@@ -428,12 +506,14 @@ export default function ClientMapPage() {
         )}
       </nav>
 
+      {menuSrc && <MenuViewer src={menuSrc} onClose={() => setMenuSrc(null)} />}
+
       {/* Carte plein écran */}
       <div className="flex-1 relative min-h-0">
         <MapView
           pois={pois}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => { setSelectedId(id); setMenuSrc(null) }}
         />
 
         {isMobile ? (
@@ -444,6 +524,7 @@ export default function ClientMapPage() {
                 poi={selectedPoi}
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
+                onOpenMenu={setMenuSrc}
               />
             )}
             {/* Pill légende quand aucun spot n'est sélectionné */}
@@ -459,6 +540,7 @@ export default function ClientMapPage() {
                 selectedPoi={selectedPoi}
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
+                onOpenMenu={setMenuSrc}
               />
             )}
             {/* Watermark desktop */}

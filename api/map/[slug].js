@@ -29,7 +29,8 @@ export default async function handler(req, res) {
       pois (
         id, name, description, details, category,
         address, latitude, longitude,
-        instagram_url, image_url, tags
+        instagram_url, image_url, tags,
+        menu_url, flo_reco
       )
     `)
     .eq('client_map_id', map.id)

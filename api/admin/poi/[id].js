@@ -7,10 +7,16 @@ export default async function handler(req, res) {
   const { id } = req.query
 
   if (req.method === 'PUT') {
-    const fields = req.body ?? {}
+    const { name, description, details, category, address, latitude, longitude,
+      instagram_url, image_url, tags, is_active, menu_url, flo_reco } = req.body ?? {}
     const { data, error } = await supabaseAdmin
       .from('pois')
-      .update({ ...fields, updated_at: new Date().toISOString() })
+      .update({
+        name, description, details, category, address, latitude, longitude,
+        instagram_url, image_url, tags, is_active,
+        menu_url: menu_url || null, flo_reco: flo_reco || null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select()
       .single()

@@ -66,6 +66,10 @@ CREATE POLICY "Service role only" ON client_map_pois
 -- Public : oui (CDN public)
 -- Path format : /{poi_id}/{filename}
 
+-- ── Colonnes restaurant : menu + reco de Flo ────────────────
+ALTER TABLE pois ADD COLUMN IF NOT EXISTS menu_url  TEXT;
+ALTER TABLE pois ADD COLUMN IF NOT EXISTS flo_reco  TEXT;
+
 -- ── Trigger : updated_at automatique ─────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$

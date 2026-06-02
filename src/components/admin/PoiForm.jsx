@@ -54,6 +54,7 @@ const INITIAL = {
   access: '', duration: '', difficulty: '',
   address: '', latitude: '', longitude: '',
   instagram_url: '', image_url: '', tags: [], is_active: true,
+  menu_url: '', flo_reco: '',
 }
 
 export default function PoiForm({ initial, onSave, onCancel, saving }) {
@@ -99,7 +100,14 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
         <Field label="Catégorie" required error={errors.category}>
           <select
             value={form.category}
-            onChange={(e) => set('category', e.target.value)}
+            onChange={(e) => {
+              const cat = e.target.value
+              setForm(f => ({
+                ...f,
+                category: cat,
+                ...(cat !== 'restaurant' ? { menu_url: '', flo_reco: '' } : {}),
+              }))
+            }}
             className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none"
             style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'var(--color-surface)' }}
           >
@@ -176,6 +184,30 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
       <Field label="Photo">
         <ImageUpload value={form.image_url} onChange={v => set('image_url', v)} />
       </Field>
+
+      {/* Carte du menu + Reco de Flo (restaurants uniquement) */}
+      {form.category === 'restaurant' && (
+        <>
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 4 }}>
+            <p className="text-sm font-semibold mb-4" style={{ color: 'var(--color-forest-dark)' }}>
+              🍽️ Spécifique restaurant
+            </p>
+            <div className="flex flex-col gap-5">
+              <Field label="Carte du menu (image)">
+                <ImageUpload value={form.menu_url} onChange={v => set('menu_url', v)} />
+              </Field>
+              <Field label="Reco de Flo">
+                <Textarea
+                  value={form.flo_reco}
+                  onChange={v => set('flo_reco', v)}
+                  placeholder="Les plats à ne pas rater, l'ambiance, les meilleurs horaires…"
+                  rows={4}
+                />
+              </Field>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Tags */}
       <Field label="Tags">
