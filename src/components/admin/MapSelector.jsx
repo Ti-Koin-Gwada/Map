@@ -86,9 +86,11 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
   const itineraryPois = itinerary.map(id => pois.find(p => p.id === id)).filter(Boolean)
 
   const toggle = (id) => {
-    onChosenChange(chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id])
-    if (!chosen.includes(id) === false) {
+    if (chosen.includes(id)) {
+      onChosenChange(chosen.filter(x => x !== id))
       onItineraryChange(itinerary.filter(x => x !== id))
+    } else {
+      onChosenChange([...chosen, id])
     }
   }
 
@@ -115,8 +117,14 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
 
   const setNote = (id, val) => onNotesChange({ ...notes, [id]: val })
 
+  // Fix Issue 6 — precompute order map pour éviter O(n²) dans le render
+  const itineraryOrder = Object.fromEntries(itinerary.map((id, i) => [id, i]))
+
   // ── Panneau liste des spots + itinéraire ─────────────────────
-  const SpotsPanel = () => (
+  // Fix Issue 1 — renderSpotsPanel() appelé comme fonction, pas <SpotsPanel />
+  // Une définition de composant inline crée une nouvelle référence à chaque render,
+  // ce qui démonte/remonte le DOM et fait perdre le focus des <textarea>.
+  const renderSpotsPanel = () => (
     <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-3">
       {/* Spots sélectionnés */}
       {chosen.length === 0 ? (
@@ -132,7 +140,7 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
           {chosen.map((id) => {
             const poi = pois.find(p => p.id === id)
             if (!poi) return null
-            const itineraryIndex = itinerary.includes(id) ? itinerary.indexOf(id) : null
+            const itineraryIndex = itineraryOrder[id] ?? null
             return (
               <SpotRow
                 key={id}
@@ -254,9 +262,7 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
               </div>
             </div>
           </div>
-        ) : (
-          <SpotsPanel />
-        )}
+        ) : renderSpotsPanel()}
       </div>
     )
   }
@@ -309,7 +315,7 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
           style={{ color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
           Spots de la carte · {chosen.length}
         </p>
-        <SpotsPanel />
+        {renderSpotsPanel()}
       </div>
     </div>
   )

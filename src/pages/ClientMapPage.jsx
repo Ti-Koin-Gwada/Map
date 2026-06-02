@@ -79,26 +79,31 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
           const isExpanded = expandedId === poi.id
           const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
           return (
-            <button
+            // Fix Issue 2 — <a> à l'intérieur d'un <button> est du HTML invalide.
+            // Le conteneur extérieur est un <div>, seul l'en-tête est un <button>.
+            <div
               key={poi.id}
-              type="button"
-              onClick={() => onExpandStep(isExpanded ? null : poi.id)}
-              className="w-full text-left rounded-xl transition-all"
+              className="rounded-xl transition-all overflow-hidden"
               style={{
                 border: `1.5px solid ${isExpanded ? cat?.color || 'var(--color-forest)' : 'var(--color-border)'}`,
                 background: isExpanded ? (cat?.bgLight || 'var(--color-surface)') : 'white',
-                overflow: 'hidden',
               }}
             >
-              <div className="flex items-center gap-2.5 px-3 py-2.5">
-                <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
-                <span className="flex-1 font-serif italic font-semibold text-sm truncate"
-                  style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => onExpandStep(isExpanded ? null : poi.id)}
+                className="w-full text-left"
+              >
+                <div className="flex items-center gap-2.5 px-3 py-2.5">
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
+                  <span className="flex-1 font-serif italic font-semibold text-sm truncate"
+                    style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
+                </div>
+              </button>
               {isExpanded && (
-                <div className="px-3 pb-3 flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
+                <div className="px-3 pb-3 flex flex-col gap-1.5">
                   {poi.address && (
                     <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
                       <MapPin size={11} /> {poi.address}
@@ -121,7 +126,6 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
                     href={gmapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
                     className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white mt-1"
                     style={{ background: 'var(--color-forest)' }}
                   >
@@ -129,7 +133,7 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
                   </a>
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -183,26 +187,29 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
             const isExpanded = expandedId === poi.id
             const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
             return (
-              <button
+              <div
                 key={poi.id}
-                type="button"
-                onClick={() => onExpandStep(isExpanded ? null : poi.id)}
-                className="w-full text-left rounded-xl transition-all"
+                className="rounded-xl transition-all overflow-hidden"
                 style={{
                   border: `1.5px solid ${isExpanded ? cat?.color || 'var(--color-forest)' : 'var(--color-border)'}`,
                   background: isExpanded ? (cat?.bgLight || 'var(--color-surface)') : 'white',
-                  overflow: 'hidden',
                 }}
               >
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
-                  <span className="flex-1 font-serif italic font-semibold text-base truncate"
-                    style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onExpandStep(isExpanded ? null : poi.id)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                      style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
+                    <span className="flex-1 font-serif italic font-semibold text-base truncate"
+                      style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
+                  </div>
+                </button>
                 {isExpanded && (
-                  <div className="px-4 pb-4 flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+                  <div className="px-4 pb-4 flex flex-col gap-2">
                     {poi.address && (
                       <p className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
                         <MapPin size={13} /> {poi.address}
@@ -225,7 +232,6 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
                       href={gmapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
                       className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold mt-1"
                       style={{ background: 'var(--color-forest)' }}
                     >
@@ -233,7 +239,7 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
                     </a>
                   </div>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>

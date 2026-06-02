@@ -231,7 +231,8 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
   const [form, setForm]           = useState(INITIAL_FORM)
   const [chosen, setChosen]       = useState([])
   const [notes, setNotes]         = useState({})
-  const [itinerary, setItinerary] = useState([])
+  const [itinerary, setItinerary]         = useState([])
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const isMobile = useIsMobile()
 
   const handleSave = (withItinerary = false) => {
@@ -272,16 +273,21 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
               <Button
                 variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
                 disabled={chosen.length === 0 || saving}
-                onClick={() => handleSave(false)}
+                onClick={() => {
+                  if (itinerary.length >= 2 && !confirmDiscard) { setConfirmDiscard(true); return }
+                  setConfirmDiscard(false)
+                  handleSave(false)
+                }}
                 className="w-full"
+                style={confirmDiscard ? { background: '#DC2626', color: 'white', border: 'none' } : {}}
               >
-                {saving ? 'Génération…' : `Générer (${chosen.length} spots) →`}
+                {saving ? 'Génération…' : confirmDiscard ? `Confirmer ? L'itinéraire sera ignoré` : `Générer (${chosen.length} spots) →`}
               </Button>
               {itinerary.length >= 2 && (
                 <Button
                   variant="primary"
                   disabled={saving}
-                  onClick={() => handleSave(true)}
+                  onClick={() => { setConfirmDiscard(false); handleSave(true) }}
                   className="w-full"
                 >
                   {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
@@ -309,15 +315,20 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
                 <Button
                   variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
                   disabled={chosen.length === 0 || saving}
-                  onClick={() => handleSave(false)}
+                  onClick={() => {
+                    if (itinerary.length >= 2 && !confirmDiscard) { setConfirmDiscard(true); return }
+                    setConfirmDiscard(false)
+                    handleSave(false)
+                  }}
+                  style={confirmDiscard ? { background: '#DC2626', color: 'white', border: 'none' } : {}}
                 >
-                  {saving ? 'Génération…' : 'Générer la carte →'}
+                  {saving ? 'Génération…' : confirmDiscard ? 'Confirmer sans itinéraire ?' : 'Générer la carte →'}
                 </Button>
                 {itinerary.length >= 2 && (
                   <Button
                     variant="primary"
                     disabled={saving}
-                    onClick={() => handleSave(true)}
+                    onClick={() => { setConfirmDiscard(false); handleSave(true) }}
                   >
                     {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
                   </Button>

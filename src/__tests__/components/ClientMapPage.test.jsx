@@ -284,6 +284,17 @@ describe('Itinéraire', () => {
     renderPage()
     expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
   })
+
+  it('le lien "Y aller" dans l\'étape développée est un <a> valide, pas dans un <button>', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-resto-1'))
+    // RESTO_1 est l'étape 2, expanded par défaut
+    const link = screen.getByRole('link', { name: /Y aller/i })
+    expect(link).toBeInTheDocument()
+    expect(link.tagName).toBe('A')
+    // Fix Issue 2 : le lien ne doit pas être imbriqué dans un <button>
+    expect(link.closest('button')).toBeNull()
+  })
 })
 
 // ── Carte du menu (MenuViewer) ────────────────────────────────
