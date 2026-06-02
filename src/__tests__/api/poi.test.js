@@ -91,3 +91,40 @@ describe('Unsupported method', () => {
     expect(res.statusCode).toBe(405)
   })
 })
+
+describe('POST /api/admin/poi — champs restaurant (menu_url / flo_reco)', () => {
+  it('insère menu_url et flo_reco quand ils sont fournis', async () => {
+    wireChain({ data: { id: 'r1', name: 'Chez Marcel', category: 'restaurant', latitude: 16, longitude: -61 }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', {
+      name: 'Chez Marcel', category: 'restaurant', latitude: 16, longitude: -61,
+      menu_url: 'https://cdn.example.com/menu.jpg', flo_reco: 'Incontournable !',
+    }), res)
+    expect(res.statusCode).toBe(201)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.menu_url).toBe('https://cdn.example.com/menu.jpg')
+    expect(inserted.flo_reco).toBe('Incontournable !')
+  })
+
+  it('convertit les chaînes vides en null', async () => {
+    wireChain({ data: { id: 'r2', name: 'Plage Test', category: 'plage', latitude: 16, longitude: -61 }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', {
+      name: 'Plage Test', category: 'plage', latitude: 16, longitude: -61,
+      menu_url: '', flo_reco: '',
+    }), res)
+    expect(res.statusCode).toBe(201)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.menu_url).toBeNull()
+    expect(inserted.flo_reco).toBeNull()
+  })
+
+  it('stocke null quand menu_url et flo_reco sont absents', async () => {
+    wireChain({ data: { id: 'r3', name: 'Randonnée', category: 'randonnee', latitude: 16, longitude: -61 }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', { name: 'Randonnée', category: 'randonnee', latitude: 16, longitude: -61 }), res)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.menu_url).toBeNull()
+    expect(inserted.flo_reco).toBeNull()
+  })
+})

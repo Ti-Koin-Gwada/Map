@@ -66,6 +66,27 @@ describe('GET /api/map/:slug', () => {
     expect(res.body.notes['poi-1']).toBe('Très belle plage')
   })
 
+  it('inclut menu_url et flo_reco dans les POIs de la réponse', async () => {
+    const poiData = {
+      id: 'poi-r', name: 'Chez Marcel', category: 'restaurant',
+      latitude: 16.3, longitude: -61.6,
+      menu_url: 'https://cdn.example.com/menu.jpg', flo_reco: 'Incontournable !',
+    }
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return makeChain({ data: { id: 'map-1', slug: 'my-map', client_name: 'Alice', is_active: true }, error: null })
+      }
+      return makeChain({ data: [{ custom_note: null, display_order: 0, pois: poiData }], error: null })
+    })
+    const res = mockRes()
+    await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
+    expect(res.statusCode).toBe(200)
+    expect(res.body.pois[0].menu_url).toBe('https://cdn.example.com/menu.jpg')
+    expect(res.body.pois[0].flo_reco).toBe('Incontournable !')
+  })
+
   it('returns empty pois and notes when no links exist', async () => {
     let callCount = 0
     mockFrom.mockImplementation(() => {

@@ -55,6 +55,45 @@ describe('PUT /api/admin/poi/:id', () => {
   })
 })
 
+describe('PUT /api/admin/poi/:id — whitelist et champs restaurant', () => {
+  it('passe menu_url et flo_reco au UPDATE', async () => {
+    wireChain({ data: { id: 'poi-1' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { menu_url: 'https://cdn.example.com/menu.jpg', flo_reco: 'Top !' }, 'poi-1'), res)
+    expect(res.statusCode).toBe(200)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated.menu_url).toBe('https://cdn.example.com/menu.jpg')
+    expect(updated.flo_reco).toBe('Top !')
+  })
+
+  it('convertit les chaînes vides en null', async () => {
+    wireChain({ data: { id: 'poi-1' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { name: 'X', menu_url: '', flo_reco: '' }, 'poi-1'), res)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated.menu_url).toBeNull()
+    expect(updated.flo_reco).toBeNull()
+  })
+
+  it("n'envoie pas de champs arbitraires à Supabase", async () => {
+    wireChain({ data: { id: 'poi-1' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { name: 'X', is_admin: true, __proto__: {}, password: 'secret' }, 'poi-1'), res)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated).not.toHaveProperty('is_admin')
+    expect(updated).not.toHaveProperty('password')
+  })
+
+  it('inclut updated_at dans le UPDATE', async () => {
+    wireChain({ data: { id: 'poi-1' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { name: 'Test' }, 'poi-1'), res)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated).toHaveProperty('updated_at')
+    expect(typeof updated.updated_at).toBe('string')
+  })
+})
+
 describe('DELETE /api/admin/poi/:id', () => {
   it('returns 204 on successful delete', async () => {
     wireChain({ error: null })
