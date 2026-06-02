@@ -59,6 +59,25 @@ describe('PUT /api/admin/client-map/:id', () => {
   })
 })
 
+describe('PUT /api/admin/client-map/:id — show_route', () => {
+  it('passe show_route=true au UPDATE', async () => {
+    wireChain({ data: { id: 'map-1', client_name: 'Bob' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { client_name: 'Bob', show_route: true }, 'map-1'), res)
+    expect(res.statusCode).toBe(200)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated.show_route).toBe(true)
+  })
+
+  it('passe show_route=false quand absent', async () => {
+    wireChain({ data: { id: 'map-1', client_name: 'Bob' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { client_name: 'Bob' }, 'map-1'), res)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated.show_route).toBe(false)
+  })
+})
+
 describe('DELETE /api/admin/client-map/:id', () => {
   it('returns 204 on success', async () => {
     wireChain({ error: null })

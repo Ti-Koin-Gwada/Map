@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GripVertical, X, Map, List } from 'lucide-react'
+import { GripVertical, X, Map, List, Route } from 'lucide-react'
 import MapView from '../map/MapView.jsx'
 import MapFilters from '../map/MapFilters.jsx'
 import { CATEGORIES } from '../../lib/constants.js'
@@ -41,12 +41,13 @@ function SpotRow({ poi, index, note, onNoteChange, onRemove, onMoveUp, onMoveDow
   )
 }
 
-export default function MapSelector({ pois = [], chosen, onChosenChange, notes, onNotesChange, totalPois }) {
+export default function MapSelector({ pois = [], chosen, onChosenChange, notes, onNotesChange, totalPois, showRoute, onShowRouteChange }) {
   const [filter, setFilter] = useState('all')
   const [mobileTab, setMobileTab] = useState('map')
   const isMobile = useIsMobile()
 
   const shown = filter === 'all' ? pois : pois.filter(p => p.category === filter)
+  const routePois = chosen.map(id => shown.find(p => p.id === id)).filter(Boolean)
 
   const toggle = (id) => {
     onChosenChange(chosen.includes(id) ? chosen.filter(x => x !== id) : [...chosen, id])
@@ -95,7 +96,7 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
             </div>
             {/* Map */}
             <div className="relative flex-1 min-h-0">
-              <MapView pois={shown} selectionMode chosenIds={chosen} onToggle={toggle} />
+              <MapView pois={shown} selectionMode chosenIds={chosen} onToggle={toggle} showRoute={showRoute} routePois={routePois} />
               {/* Compteur */}
               <div
                 className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm flex items-baseline gap-1.5"
@@ -123,32 +124,55 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2.5">
-            {chosen.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-center px-4 py-16">
-                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  Retournez sur la carte et tapez sur les pins pour ajouter des spots.
-                </p>
+          <>
+            {/* Toggle tracé — mobile */}
+            {chosen.length > 1 && (
+              <div className="flex items-center justify-between px-4 py-2 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--color-forest-dark)' }}>
+                  <Route size={13} /> Tracé entre les spots
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onShowRouteChange(!showRoute)}
+                  className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+                  style={{ background: showRoute ? 'var(--color-forest)' : 'var(--color-border-mid)' }}
+                  aria-pressed={showRoute}
+                  aria-label="Afficher le tracé"
+                >
+                  <span
+                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                    style={{ left: 2, transform: showRoute ? 'translateX(16px)' : 'translateX(0)' }}
+                  />
+                </button>
               </div>
-            ) : chosen.map((id, i) => {
-              const poi = pois.find(p => p.id === id)
-              if (!poi) return null
-              return (
-                <SpotRow
-                  key={id}
-                  poi={poi}
-                  index={i}
-                  note={notes[id]}
-                  onNoteChange={(v) => setNote(id, v)}
-                  onRemove={() => toggle(id)}
-                  onMoveUp={() => move(i, -1)}
-                  onMoveDown={() => move(i, 1)}
-                  isFirst={i === 0}
-                  isLast={i === chosen.length - 1}
-                />
-              )
-            })}
-          </div>
+            )}
+            <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2.5">
+              {chosen.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center text-center px-4 py-16">
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                    Retournez sur la carte et tapez sur les pins pour ajouter des spots.
+                  </p>
+                </div>
+              ) : chosen.map((id, i) => {
+                const poi = pois.find(p => p.id === id)
+                if (!poi) return null
+                return (
+                  <SpotRow
+                    key={id}
+                    poi={poi}
+                    index={i}
+                    note={notes[id]}
+                    onNoteChange={(v) => setNote(id, v)}
+                    onRemove={() => toggle(id)}
+                    onMoveUp={() => move(i, -1)}
+                    onMoveDown={() => move(i, 1)}
+                    isFirst={i === 0}
+                    isLast={i === chosen.length - 1}
+                  />
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     )
@@ -163,7 +187,7 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
           <MapFilters activeFilter={filter} onChange={setFilter} />
         </div>
         <div className="relative flex-1 min-h-0">
-          <MapView pois={shown} selectionMode chosenIds={chosen} onToggle={toggle} />
+          <MapView pois={shown} selectionMode chosenIds={chosen} onToggle={toggle} showRoute={showRoute} routePois={routePois} />
           <div
             className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm flex items-baseline gap-2"
             style={{ border: '1px solid var(--color-border)' }}
@@ -191,10 +215,26 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
 
       {/* Panel spots sélectionnés */}
       <div className="w-80 flex-shrink-0 flex flex-col" style={{ background: 'var(--color-bg)' }}>
-        <p className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider flex-shrink-0"
-          style={{ color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
-          Spots de la carte · {chosen.length}
-        </p>
+        <div className="px-5 py-3 flex items-center justify-between flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+            Spots de la carte · {chosen.length}
+          </p>
+          {chosen.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onShowRouteChange(!showRoute)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: showRoute ? 'var(--color-forest)' : 'var(--color-border)',
+                color: showRoute ? 'white' : 'var(--color-text-secondary)',
+              }}
+              aria-pressed={showRoute}
+            >
+              <Route size={11} /> Tracé
+            </button>
+          )}
+        </div>
         <div className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2.5">
           {chosen.length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-center px-4 py-10">

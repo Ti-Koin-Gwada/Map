@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   // 1. Récupérer la carte
   const { data: map, error: mapErr } = await supabase
     .from('client_maps')
-    .select('id, slug, client_name, forfait, is_active')
+    .select('id, slug, client_name, forfait, is_active, show_route')
     .eq('slug', slug)
     .single()
 
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
     client_name: map.client_name,
     forfait:     map.forfait,
     slug:        map.slug,
+    show_route:  map.show_route,
     pois,
     notes,
   })

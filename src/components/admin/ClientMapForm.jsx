@@ -227,15 +227,17 @@ function Step3({ form, chosen, pois, slug, onBack }) {
 const INITIAL_FORM = { client_name: '', notes: '' }
 
 export default function ClientMapForm({ pois = [], onSave, onCancel, saving, createdSlug }) {
-  const [step, setStep]     = useState(1)
-  const [form, setForm]     = useState(INITIAL_FORM)
-  const [chosen, setChosen] = useState([])
-  const [notes, setNotes]   = useState({})
+  const [step, setStep]         = useState(1)
+  const [form, setForm]         = useState(INITIAL_FORM)
+  const [chosen, setChosen]     = useState([])
+  const [notes, setNotes]       = useState({})
+  const [showRoute, setShowRoute] = useState(false)
   const isMobile = useIsMobile()
 
   const handleSave = () => {
     onSave({
       ...form,
+      show_route: showRoute && chosen.length >= 2,
       pois: chosen.map((id, i) => ({
         poi_id:      id,
         custom_note: notes[id] || null,
@@ -314,6 +316,8 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
           notes={notes}
           onNotesChange={setNotes}
           totalPois={pois.length}
+          showRoute={showRoute}
+          onShowRouteChange={setShowRoute}
         />
       )}
     </div>

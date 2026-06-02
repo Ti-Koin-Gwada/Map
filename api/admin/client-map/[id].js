@@ -7,11 +7,11 @@ export default async function handler(req, res) {
   const { id } = req.query
 
   if (req.method === 'PUT') {
-    const { client_name, forfait, notes, is_active, pois } = req.body ?? {}
+    const { client_name, forfait, notes, is_active, show_route, pois } = req.body ?? {}
 
     const { data: map, error: mapErr } = await supabaseAdmin
       .from('client_maps')
-      .update({ client_name, forfait, notes, is_active, updated_at: new Date().toISOString() })
+      .update({ client_name, forfait, notes, is_active, show_route: !!show_route, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()

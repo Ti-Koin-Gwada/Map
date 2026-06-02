@@ -66,6 +66,21 @@ describe('GET /api/map/:slug', () => {
     expect(res.body.notes['poi-1']).toBe('Très belle plage')
   })
 
+  it('inclut show_route dans la réponse', async () => {
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return makeChain({ data: { id: 'map-1', slug: 'my-map', client_name: 'Alice', is_active: true, show_route: true }, error: null })
+      }
+      return makeChain({ data: [], error: null })
+    })
+    const res = mockRes()
+    await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
+    expect(res.statusCode).toBe(200)
+    expect(res.body.show_route).toBe(true)
+  })
+
   it('inclut menu_url et flo_reco dans les POIs de la réponse', async () => {
     const poiData = {
       id: 'poi-r', name: 'Chez Marcel', category: 'restaurant',

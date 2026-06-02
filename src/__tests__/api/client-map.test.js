@@ -49,6 +49,33 @@ describe('GET /api/admin/client-map', () => {
   })
 })
 
+describe('POST /api/admin/client-map — show_route', () => {
+  it('stocke show_route=true quand fourni à true', async () => {
+    wireChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', { client_name: 'Bob', show_route: true, pois: [] }), res)
+    expect(res.statusCode).toBe(201)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.show_route).toBe(true)
+  })
+
+  it('stocke show_route=false quand absent du body', async () => {
+    wireChain({ data: { id: 'map-2', slug: 'abc1234567', client_name: 'Alice', is_active: true }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', { client_name: 'Alice', pois: [] }), res)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.show_route).toBe(false)
+  })
+
+  it('stocke show_route=false quand explicitement false', async () => {
+    wireChain({ data: { id: 'map-3', slug: 'abc1234567', client_name: 'Carol', is_active: true }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', { client_name: 'Carol', show_route: false, pois: [] }), res)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted.show_route).toBe(false)
+  })
+})
+
 describe('POST /api/admin/client-map', () => {
   it('returns 400 when client_name is missing', async () => {
     const res = mockRes()

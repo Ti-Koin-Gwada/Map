@@ -70,6 +70,10 @@ CREATE POLICY "Service role only" ON client_map_pois
 ALTER TABLE pois ADD COLUMN IF NOT EXISTS menu_url  TEXT;
 ALTER TABLE pois ADD COLUMN IF NOT EXISTS flo_reco  TEXT;
 
+-- ── Tracé de route sur les cartes clients ───────────────────
+-- Colonne appliquée en prod via execute_sql (MCP) — IF NOT EXISTS protège les réexécutions
+ALTER TABLE client_maps ADD COLUMN IF NOT EXISTS show_route BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ── Trigger : updated_at automatique ─────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$

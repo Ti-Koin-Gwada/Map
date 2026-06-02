@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useClientMap } from '../hooks/useClientMap.js'
 import { useIsMobile } from '../hooks/useIsMobile.js'
@@ -48,7 +48,7 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
 }
 
 /* ── Desktop panel haut-gauche ────────────────────────────── */
-function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle }) {
+function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle, routeStep, totalSteps }) {
   const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
   const gmapsUrl = selectedPoi
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
@@ -108,6 +108,11 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
             {cat && (
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: cat.color }}>
                 <span className="w-2 h-2 rounded-full" style={{ background: cat.color }} /> {cat.label}
+              </span>
+            )}
+            {routeStep && (
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+                Étape {routeStep} / {totalSteps}
               </span>
             )}
             <h3 className="font-serif italic font-semibold text-xl leading-tight" style={{ color: 'var(--color-forest-dark)' }}>
@@ -233,7 +238,7 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
 }
 
 /* ── Mobile bottom sheet ──────────────────────────────────── */
-function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
+function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu, routeStep, totalSteps }) {
   if (!poi) return null
   const cat = CATEGORIES[poi.category]
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
@@ -293,6 +298,11 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
 
         {/* Contenu scrollable */}
         <div className="flex-1 overflow-y-auto tk-scroll px-5 py-4 flex flex-col gap-3">
+          {routeStep && (
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+              Étape {routeStep} / {totalSteps}
+            </span>
+          )}
           <h2
             className="font-serif italic font-semibold text-2xl leading-tight"
             style={{ color: 'var(--color-forest-dark)' }}
@@ -516,10 +526,19 @@ export default function ClientMapPage() {
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
   const selectedNote = map?.notes?.[selectedId]
-  const filteredPois = filterCat ? pois.filter(p => p.category === filterCat) : pois
-  const categories   = [...new Set(pois.map(p => p.category))]
-    .map(k => ({ key: k, ...CATEGORIES[k] }))
-    .filter(c => c.label)
+  const filteredPois = useMemo(
+    () => filterCat ? pois.filter(p => p.category === filterCat) : pois,
+    [pois, filterCat]
+  )
+  const categories = useMemo(
+    () => [...new Set(pois.map(p => p.category))]
+      .map(k => ({ key: k, ...CATEGORIES[k] }))
+      .filter(c => c.label),
+    [pois]
+  )
+  const routeStep = map?.show_route && selectedPoi
+    ? pois.findIndex(p => p.id === selectedPoi.id) + 1
+    : null
 
   const toggleFilter = (cat) => {
     const next = filterCat === cat ? null : cat
@@ -580,6 +599,8 @@ export default function ClientMapPage() {
           pois={filteredPois}
           selectedId={selectedId}
           onSelect={(id) => { setSelectedId(id); setMenuSrc(null) }}
+          showRoute={!!map?.show_route}
+          routePois={filteredPois}
         />
 
         {isMobile ? (
@@ -591,6 +612,8 @@ export default function ClientMapPage() {
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
                 onOpenMenu={setMenuSrc}
+                routeStep={routeStep}
+                totalSteps={pois.length}
               />
             )}
             {/* Pill légende quand aucun spot n'est sélectionné */}
@@ -617,6 +640,8 @@ export default function ClientMapPage() {
                 onOpenMenu={setMenuSrc}
                 filterCat={filterCat}
                 onToggle={toggleFilter}
+                routeStep={routeStep}
+                totalSteps={pois.length}
               />
             )}
             {/* Watermark desktop */}

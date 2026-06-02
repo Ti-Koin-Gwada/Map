@@ -18,14 +18,14 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { client_name, forfait, notes, pois = [] } = req.body ?? {}
+    const { client_name, forfait, notes, show_route, pois = [] } = req.body ?? {}
     if (!client_name) return res.status(400).json({ error: 'missing_client_name' })
 
     const slug = nanoid(10)
 
     const { data: map, error: mapErr } = await supabaseAdmin
       .from('client_maps')
-      .insert([{ slug, client_name, forfait, notes, is_active: true }])
+      .insert([{ slug, client_name, forfait, notes, show_route: !!show_route, is_active: true }])
       .select()
       .single()
     if (mapErr) return res.status(500).json({ error: mapErr.message })

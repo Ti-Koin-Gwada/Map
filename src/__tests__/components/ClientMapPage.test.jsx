@@ -14,8 +14,13 @@ vi.mock('../../hooks/useIsMobile.js', () => ({ useIsMobile: vi.fn() }))
 
 // MapView renders clickable markers so we can simulate user selections
 vi.mock('../../components/map/MapView.jsx', () => ({
-  default: ({ pois, onSelect }) => (
-    <div data-testid="map-view" data-count={pois.length}>
+  default: ({ pois, onSelect, showRoute, routePois }) => (
+    <div
+      data-testid="map-view"
+      data-count={pois.length}
+      data-show-route={showRoute ? 'true' : 'false'}
+      data-route-count={routePois?.length ?? 0}
+    >
       {pois.map(p => (
         <button key={p.id} data-testid={`marker-${p.id}`} onClick={() => onSelect(p.id)}>
           {p.name}
@@ -185,6 +190,73 @@ describe('Reco de Flo', () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
     expect(screen.queryByText('Reco de Flo')).not.toBeInTheDocument()
+  })
+})
+
+// ── Tracé de route ───────────────────────────────────────────
+
+describe('Tracé de route', () => {
+  beforeEach(() => {
+    useClientMap.mockReturnValue({
+      ...makeMap(),
+      map: { client_name: 'Alice', notes: {}, show_route: true },
+    })
+    useIsMobile.mockReturnValue(false)
+  })
+
+  it('passe showRoute=true au MapView quand map.show_route=true', () => {
+    renderPage()
+    expect(screen.getByTestId('map-view').dataset.showRoute).toBe('true')
+  })
+
+  it('passe showRoute=false au MapView quand map.show_route est absent', () => {
+    useClientMap.mockReturnValue(makeMap())
+    renderPage()
+    expect(screen.getByTestId('map-view').dataset.showRoute).toBe('false')
+  })
+
+  it('passe routePois avec le bon nombre de spots', () => {
+    renderPage()
+    // no filter active → routePois = all 3 pois
+    expect(screen.getByTestId('map-view').dataset.routeCount).toBe('3')
+  })
+
+  it('routePois suit le filtre actif', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: /Plages/i }))
+    // filter "plage" → 2 plages visibles → routePois = 2
+    expect(screen.getByTestId('map-view').dataset.routeCount).toBe('2')
+  })
+
+  it('affiche "Étape 1 / 3" quand le premier spot est sélectionné', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    expect(screen.getByText('Étape 1 / 3')).toBeInTheDocument()
+  })
+
+  it('affiche "Étape 3 / 3" pour le dernier spot', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-resto-1'))
+    expect(screen.getByText('Étape 3 / 3')).toBeInTheDocument()
+  })
+
+  it("n'affiche pas le badge Étape quand show_route=false", async () => {
+    useClientMap.mockReturnValue(makeMap())
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    expect(screen.queryByText(/Étape/)).not.toBeInTheDocument()
+  })
+
+  it("n'affiche pas le badge Étape quand aucun spot n'est sélectionné", () => {
+    renderPage()
+    expect(screen.queryByText(/Étape/)).not.toBeInTheDocument()
+  })
+
+  it('affiche le badge Étape dans MobileSpotSheet sur mobile', async () => {
+    useIsMobile.mockReturnValue(true)
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    expect(screen.getByText('Étape 1 / 3')).toBeInTheDocument()
   })
 })
 
