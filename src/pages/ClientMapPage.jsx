@@ -50,7 +50,7 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
 }
 
 /* ── Itinerary panel desktop ──────────────────────────────── */
-function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary }) {
+function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary, onOpenMenu }) {
   return (
     <div
       className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col overflow-hidden"
@@ -100,6 +100,11 @@ function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpand
           const gmapsUrl = poi.address
             ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`
             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+          const instaUrl = poi.instagram_url
+            ? poi.instagram_url.startsWith('http')
+              ? poi.instagram_url
+              : `https://www.instagram.com/${poi.instagram_url.replace('@', '')}`
+            : null
           return (
             <div
               key={poi.id}
@@ -123,35 +128,66 @@ function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpand
                 </div>
               </button>
               {isExpanded && (
-                <div className="px-3 pb-3 flex flex-col gap-1.5">
-                  {poi.address && (
-                    <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      <MapPin size={11} /> {poi.address}
-                    </p>
+                <>
+                  {poi.image_url && (
+                    <div style={{ height: 100, overflow: 'hidden', background: cat ? `linear-gradient(135deg, ${cat.color}22, ${cat.color}08)` : '#F3F1E8' }}>
+                      <img src={poi.image_url} alt={poi.name} className="w-full h-full object-cover" />
+                    </div>
                   )}
-                  {poi.description && (
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      {poi.description}
-                    </p>
-                  )}
-                  {poi.flo_reco && (
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
-                      🌿 {poi.flo_reco}
-                    </p>
-                  )}
-                  {customNote && (
-                    <p className="text-xs leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
-                  )}
-                  <a
-                    href={gmapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white mt-1"
-                    style={{ background: 'var(--color-forest)' }}
-                  >
-                    <Navigation size={12} /> Y aller
-                  </a>
-                </div>
+                  <div className="px-3 pb-3 flex flex-col gap-1.5" style={{ paddingTop: poi.image_url ? 8 : 0 }}>
+                    {poi.address && (
+                      <p className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        <MapPin size={11} /> {poi.address}
+                      </p>
+                    )}
+                    {poi.description && (
+                      <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {poi.description}
+                      </p>
+                    )}
+                    {poi.flo_reco && (
+                      <p className="text-xs leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
+                        🌿 {poi.flo_reco}
+                      </p>
+                    )}
+                    {customNote && (
+                      <p className="text-xs leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
+                    )}
+                    <div className="flex gap-1.5 mt-1">
+                      <a
+                        href={gmapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white"
+                        style={{ background: 'var(--color-forest)' }}
+                      >
+                        <Navigation size={12} /> Y aller
+                      </a>
+                      {poi.menu_url && (
+                        <button
+                          type="button"
+                          aria-label="Voir la carte du menu"
+                          onClick={() => onOpenMenu?.(poi.menu_url)}
+                          className="flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold"
+                          style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'white' }}
+                        >
+                          <BookOpen size={12} />
+                        </button>
+                      )}
+                      {instaUrl && (
+                        <a
+                          href={instaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center px-3 py-2 rounded-xl text-xs font-semibold"
+                          style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'white' }}
+                        >
+                          <Instagram size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )
@@ -162,7 +198,7 @@ function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpand
 }
 
 /* ── Itinerary sheet mobile ───────────────────────────────── */
-function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary }) {
+function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary, onOpenMenu }) {
   if (!itinerary?.pois?.length) return null
   return (
     <div
@@ -226,6 +262,11 @@ function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpand
             const gmapsUrl = poi.address
               ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`
               : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+            const instaUrl = poi.instagram_url
+              ? poi.instagram_url.startsWith('http')
+                ? poi.instagram_url
+                : `https://www.instagram.com/${poi.instagram_url.replace('@', '')}`
+              : null
             return (
               <div
                 key={poi.id}
@@ -249,35 +290,65 @@ function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpand
                   </div>
                 </button>
                 {isExpanded && (
-                  <div className="px-4 pb-4 flex flex-col gap-2">
-                    {poi.address && (
-                      <p className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        <MapPin size={13} /> {poi.address}
-                      </p>
+                  <>
+                    {poi.image_url && (
+                      <div style={{ height: 140, overflow: 'hidden', background: cat ? `linear-gradient(135deg, ${cat.color}22, ${cat.color}08)` : '#F3F1E8' }}>
+                        <img src={poi.image_url} alt={poi.name} className="w-full h-full object-cover" />
+                      </div>
                     )}
-                    {poi.description && (
-                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                        {poi.description}
-                      </p>
-                    )}
-                    {poi.flo_reco && (
-                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
-                        🌿 {poi.flo_reco}
-                      </p>
-                    )}
-                    {customNote && (
-                      <p className="text-sm leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
-                    )}
-                    <a
-                      href={gmapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold mt-1"
-                      style={{ background: 'var(--color-forest)' }}
-                    >
-                      <Navigation size={16} /> Y aller (Google Maps)
-                    </a>
-                  </div>
+                    <div className="px-4 pb-4 flex flex-col gap-2" style={{ paddingTop: poi.image_url ? 12 : 0 }}>
+                      {poi.address && (
+                        <p className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                          <MapPin size={13} /> {poi.address}
+                        </p>
+                      )}
+                      {poi.description && (
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                          {poi.description}
+                        </p>
+                      )}
+                      {poi.flo_reco && (
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--color-forest-dark)' }}>
+                          🌿 {poi.flo_reco}
+                        </p>
+                      )}
+                      {customNote && (
+                        <p className="text-sm leading-relaxed" style={{ color: '#8A6D1F' }}>💬 {customNote}</p>
+                      )}
+                      <a
+                        href={gmapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold mt-1"
+                        style={{ background: 'var(--color-forest)' }}
+                      >
+                        <Navigation size={16} /> Y aller (Google Maps)
+                      </a>
+                      {poi.menu_url && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenMenu?.(poi.menu_url)}
+                          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-semibold text-sm"
+                          style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'white' }}
+                        >
+                          <BookOpen size={16} />
+                          Voir la carte du menu
+                        </button>
+                      )}
+                      {instaUrl && (
+                        <a
+                          href={instaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-semibold text-sm"
+                          style={{ border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-primary)', background: 'white' }}
+                        >
+                          <Instagram size={16} />
+                          Voir sur Instagram
+                        </a>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             )
@@ -869,6 +940,7 @@ export default function ClientMapPage() {
                 onExpandStep={setExpandedStepId}
                 onClose={closeItinerary}
                 onSelectItinerary={setActiveItineraryId}
+                onOpenMenu={setMenuSrc}
               />
             )}
             {!itineraryOpen && selectedPoi && (
@@ -891,6 +963,7 @@ export default function ClientMapPage() {
                 onExpandStep={setExpandedStepId}
                 onClose={closeItinerary}
                 onSelectItinerary={setActiveItineraryId}
+                onOpenMenu={setMenuSrc}
               />
             )}
             {!itineraryOpen && pois.length > 0 && (
