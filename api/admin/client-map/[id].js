@@ -18,35 +18,14 @@ export default async function handler(req, res) {
       .single()
     if (mapErr) return res.status(500).json({ error: mapErr.message })
 
-    if (pois !== undefined) {
-      await supabaseAdmin.from('client_map_pois').delete().eq('client_map_id', id)
-      if (pois.length > 0) {
-        const links = pois.map(p => ({
-          client_map_id: id,
-          poi_id:        p.poi_id,
-          custom_note:   p.custom_note || null,
-          display_order: null,
-        }))
-        const { error: linksErr } = await supabaseAdmin.from('client_map_pois').insert(links)
-        if (linksErr) return res.status(500).json({ error: linksErr.message })
-      }
-    }
-
-    if (itineraries !== undefined) {
-      await supabaseAdmin.from('itineraries').delete().eq('client_map_id', id)
-      for (const it of itineraries) {
-        if (!it.steps?.length) continue
-        const { data: itin, error: itinErr } = await supabaseAdmin
-          .from('itineraries')
-          .insert([{ client_map_id: id, name: it.name || 'Itinéraire' }])
-          .select()
-          .single()
-        if (itinErr) return res.status(500).json({ error: itinErr.message })
-
-        const steps = it.steps.map((poi_id, i) => ({ itinerary_id: itin.id, poi_id, step_order: i }))
-        const { error: stepsErr } = await supabaseAdmin.from('itinerary_steps').insert(steps)
-        if (stepsErr) return res.status(500).json({ error: stepsErr.message })
-      }
+    // Atomically replace POIs and itineraries via RPC when content is provided
+    if (pois !== undefined || itineraries !== undefined) {
+      const { error: rpcErr } = await supabaseAdmin.rpc('replace_map_content', {
+        p_map_id:       id,
+        p_pois:         pois ?? [],
+        p_itineraries:  itineraries ?? [],
+      })
+      if (rpcErr) return res.status(500).json({ error: rpcErr.message })
     }
 
     return res.status(200).json(map)

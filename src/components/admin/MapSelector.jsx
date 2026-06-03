@@ -16,7 +16,7 @@ function SpotRow({ poi, note, onNoteChange, onRemove }) {
         <span className="flex-1 font-serif italic font-semibold text-sm truncate" style={{ color: 'var(--color-forest-dark)' }}>
           {poi.name}
         </span>
-        <button type="button" onClick={onRemove}
+        <button type="button" onClick={onRemove} aria-label={`Retirer ${poi.name}`}
           className="w-6 h-6 flex items-center justify-center rounded-lg text-sm opacity-40 hover:opacity-70 transition-opacity">
           <X size={13} />
         </button>
@@ -94,6 +94,12 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
   const removeSpot = (id) => {
     onChosenChange(chosen.filter(x => x !== id))
     setDraftSteps(prev => prev.filter(x => x !== id))
+    // Also clean from confirmed itineraries, remove empty ones
+    onItinerariesChange(
+      itineraries
+        .map(it => ({ ...it, steps: it.steps.filter(s => s !== id) }))
+        .filter(it => it.steps.length > 0)
+    )
   }
 
   const moveDraftStep = (i, dir) => {

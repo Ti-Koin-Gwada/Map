@@ -141,6 +141,22 @@ describe('GET /api/map/:slug', () => {
     expect(res.body.pois[0].flo_reco).toBe('Incontournable !')
   })
 
+  it('retourne 500 si la requête itineraries échoue', async () => {
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return makeChain({ data: { id: 'map-1', slug: 'my-map', client_name: 'Alice', is_active: true }, error: null })
+      }
+      if (callCount === 2) return makeChain({ data: [], error: null })
+      return makeChain({ data: null, error: { message: 'itinerary_error' } })
+    })
+    const res = mockRes()
+    await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
+    expect(res.statusCode).toBe(500)
+    expect(res.body).toEqual({ error: 'server_error' })
+  })
+
   it('returns empty pois and notes when no links exist', async () => {
     let callCount = 0
     mockFrom.mockImplementation(() => {

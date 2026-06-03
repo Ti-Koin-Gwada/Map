@@ -45,11 +45,12 @@ export default async function handler(req, res) {
   }
 
   // 3. Récupérer les itinéraires avec leurs étapes
-  const { data: itiData } = await supabase
+  const { data: itiData, error: itiErr } = await supabase
     .from('itineraries')
     .select(`id, name, itinerary_steps ( poi_id, step_order )`)
     .eq('client_map_id', map.id)
     .order('created_at', { ascending: true })
+  if (itiErr) return res.status(500).json({ error: 'server_error' })
 
   const itineraries = (itiData ?? []).map(it => ({
     id:    it.id,

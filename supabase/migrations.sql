@@ -114,3 +114,47 @@ CREATE TABLE IF NOT EXISTS itinerary_steps (
 ALTER TABLE itinerary_steps ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role only" ON itinerary_steps
   USING (auth.role() = 'service_role');
+
+-- ── RPC : remplacement atomique du contenu d'une carte ────────
+CREATE OR REPLACE FUNCTION replace_map_content(
+  p_map_id uuid,
+  p_pois jsonb,
+  p_itineraries jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_itin jsonb;
+  v_itin_id uuid;
+  v_step text;
+  v_step_order int;
+BEGIN
+  DELETE FROM client_map_pois WHERE client_map_id = p_map_id;
+  DELETE FROM itineraries WHERE client_map_id = p_map_id;
+
+  IF jsonb_array_length(p_pois) > 0 THEN
+    INSERT INTO client_map_pois (client_map_id, poi_id, custom_note, display_order)
+    SELECT
+      p_map_id,
+      (elem->>'poi_id')::uuid,
+      NULLIF(elem->>'custom_note', ''),
+      NULL
+    FROM jsonb_array_elements(p_pois) AS elem;
+  END IF;
+
+  FOR v_itin IN SELECT value FROM jsonb_array_elements(p_itineraries) LOOP
+    INSERT INTO itineraries (client_map_id, name)
+    VALUES (p_map_id, v_itin->>'name')
+    RETURNING id INTO v_itin_id;
+
+    v_step_order := 0;
+    FOR v_step IN SELECT value FROM jsonb_array_elements_text(v_itin->'steps') LOOP
+      INSERT INTO itinerary_steps (itinerary_id, poi_id, step_order)
+      VALUES (v_itin_id, v_step::uuid, v_step_order);
+      v_step_order := v_step_order + 1;
+    END LOOP;
+  END LOOP;
+END;
+$$;

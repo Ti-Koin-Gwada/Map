@@ -75,10 +75,7 @@ describe('MapSelector — toggle en mode normal', () => {
 
   it('retirer un spot via × le retire de chosen', async () => {
     render(<Wrapper initialChosen={['a', 'b']} />)
-    const plageAName = screen.getAllByText('Plage A')[0]
-    const flexRow = plageAName.parentElement
-    const removeBtn = flexRow.querySelector('button')
-    await userEvent.click(removeBtn)
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer Plage A' }))
     expect(screen.getByTestId('chosen-state').textContent).toBe('b')
   })
 })
@@ -140,6 +137,36 @@ describe('MapSelector — mode itinéraire', () => {
     await userEvent.click(screen.getByRole('button', { name: /Annuler/i }))
     expect(screen.getByTestId('itineraries-count').textContent).toBe('0')
     expect(screen.getByRole('button', { name: /Créer un itinéraire/i })).toBeInTheDocument()
+  })
+
+  it('removeSpot retire le spot des itinéraires confirmés', async () => {
+    const onItinerariesChange = vi.fn()
+    render(
+      <Wrapper
+        initialChosen={['a', 'b', 'c']}
+        initialItineraries={[{ name: 'Matin', steps: ['a', 'b'] }]}
+        onItinerariesChange={onItinerariesChange}
+      />
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer Plage A' }))
+
+    expect(screen.getByTestId('chosen-state').textContent).toBe('b,c')
+    expect(onItinerariesChange).toHaveBeenCalledWith([{ name: 'Matin', steps: ['b'] }])
+  })
+
+  it('removeSpot supprime un itinéraire qui devient vide', async () => {
+    const onItinerariesChange = vi.fn()
+    render(
+      <Wrapper
+        initialChosen={['a', 'b']}
+        initialItineraries={[{ name: 'Solo', steps: ['a'] }]}
+        onItinerariesChange={onItinerariesChange}
+      />
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer Plage A' }))
+
+    expect(onItinerariesChange).toHaveBeenCalledWith([])
+    expect(screen.getByTestId('chosen-state').textContent).toBe('b')
   })
 
   it('"Terminer" est désactivé avec moins de 2 étapes', async () => {

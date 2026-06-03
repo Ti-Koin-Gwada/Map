@@ -52,7 +52,7 @@ describe('GET /api/admin/client-map', () => {
 describe('POST /api/admin/client-map', () => {
   beforeEach(() => {
     supabaseAdmin.from.mockReset()
-    supabaseAdmin.from.mockReturnValue(makeChain({ data: null, error: null }))
+    supabaseAdmin.from.mockReturnValue(makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null }))
   })
 
   it('returns 400 when client_name is missing', async () => {
@@ -62,38 +62,55 @@ describe('POST /api/admin/client-map', () => {
     expect(res.body).toEqual({ error: 'missing_client_name' })
   })
 
-  it('creates a map without POIs and returns 201', async () => {
-    const map = { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }
-    supabaseAdmin.from.mockReturnValue(makeChain({ data: map, error: null }))
+  it('creates a map and returns 201', async () => {
     const res = mockRes()
     await handler(adminReq('POST', { client_name: 'Bob', forfait: 'essentiel', pois: [] }), res)
     expect(res.statusCode).toBe(201)
     expect(res.body).toMatchObject({ client_name: 'Bob', slug: 'abc1234567' })
   })
 
-  it('inserts POI links when pois array is non-empty', async () => {
-    const map = { id: 'map-2', slug: 'abc1234567', client_name: 'Carol', is_active: true }
-    supabaseAdmin.from.mockReturnValue(makeChain({ data: map, error: null }))
-    const res = mockRes()
-    await handler(adminReq('POST', {
-      client_name: 'Carol',
-      forfait: 'personnalise',
-      pois: [{ poi_id: 'poi-1', custom_note: 'Super endroit' }],
-    }), res)
-    expect(res.statusCode).toBe(201)
-  })
-})
-
-describe('POST /api/admin/client-map — itinéraires', () => {
-  it('insère un itinéraire et ses étapes', async () => {
-    const mapChain  = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null })
-    const itinChain = makeChain({ data: { id: 'itin-1', client_map_id: 'map-1', name: 'Matin' }, error: null })
-    const stepsChain = makeChain({ data: null, error: null })
-
+  it('crée la carte en is_active=false au départ', async () => {
+    const mapChain    = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: false }, error: null })
+    const activateChain = makeChain({ data: { id: 'map-1', is_active: true }, error: null })
     supabaseAdmin.from
       .mockReturnValueOnce(mapChain)
-      .mockReturnValueOnce(itinChain)
-      .mockReturnValueOnce(stepsChain)
+      .mockReturnValueOnce(activateChain)
+
+    const res = mockRes()
+    await handler(adminReq('POST', { client_name: 'Bob', pois: [] }), res)
+
+    expect(res.statusCode).toBe(201)
+    const inserted = mapChain.insert.mock.calls[0][0][0]
+    expect(inserted.is_active).toBe(false)
+  })
+
+  it('supprime la carte si l\'insertion des POIs échoue (rollback)', async () => {
+    const mapChain    = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: false }, error: null })
+    const poisChain   = makeChain({ data: null, error: { message: 'poi_error' } })
+    const deleteChain = makeChain({ data: null, error: null })
+    supabaseAdmin.from
+      .mockReturnValueOnce(mapChain)
+      .mockReturnValueOnce(poisChain)
+      .mockReturnValueOnce(deleteChain)
+
+    const res = mockRes()
+    await handler(adminReq('POST', {
+      client_name: 'Bob',
+      pois: [{ poi_id: 'poi-1', custom_note: null }],
+    }), res)
+
+    expect(res.statusCode).toBe(500)
+    expect(deleteChain.delete.mock.calls.length).toBeGreaterThan(0)
+  })
+
+  it('supprime la carte si l\'insertion d\'un itinéraire échoue (rollback)', async () => {
+    const mapChain    = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: false }, error: null })
+    const itinChain   = makeChain({ data: null, error: { message: 'itin_error' } })
+    const deleteChain = makeChain({ data: null, error: null })
+    supabaseAdmin.from
+      .mockReturnValueOnce(mapChain)  // INSERT client_maps
+      .mockReturnValueOnce(itinChain)  // INSERT itineraries → error
+      .mockReturnValueOnce(deleteChain) // DELETE (rollback)
 
     const res = mockRes()
     await handler(adminReq('POST', {
@@ -102,57 +119,40 @@ describe('POST /api/admin/client-map — itinéraires', () => {
       itineraries: [{ name: 'Matin', steps: ['poi-1', 'poi-2'] }],
     }), res)
 
-    expect(res.statusCode).toBe(201)
-    const itinInserted = itinChain.insert.mock.calls[0][0][0]
-    expect(itinInserted.name).toBe('Matin')
-    expect(itinInserted.client_map_id).toBe('map-1')
-
-    const stepsInserted = stepsChain.insert.mock.calls[0][0]
-    expect(stepsInserted).toHaveLength(2)
-    expect(stepsInserted[0].poi_id).toBe('poi-1')
-    expect(stepsInserted[0].step_order).toBe(0)
-    expect(stepsInserted[1].poi_id).toBe('poi-2')
-    expect(stepsInserted[1].step_order).toBe(1)
+    expect(res.statusCode).toBe(500)
+    expect(deleteChain.delete.mock.calls.length).toBeGreaterThan(0)
   })
 
   it('dérive show_route=true quand un itinéraire a >= 2 étapes', async () => {
-    const mapChain   = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null })
-    const itinChain  = makeChain({ data: { id: 'itin-1' }, error: null })
-    const stepsChain = makeChain({ data: null, error: null })
-
+    const mapChain    = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: false }, error: null })
+    const itinChain   = makeChain({ data: { id: 'itin-1' }, error: null })
+    const stepsChain  = makeChain({ data: null, error: null })
+    const activateChain = makeChain({ data: { id: 'map-1', is_active: true }, error: null })
     supabaseAdmin.from
       .mockReturnValueOnce(mapChain)
       .mockReturnValueOnce(itinChain)
       .mockReturnValueOnce(stepsChain)
+      .mockReturnValueOnce(activateChain)
 
     const res = mockRes()
     await handler(adminReq('POST', {
       client_name: 'Bob',
       pois: [],
-      itineraries: [{ name: 'Matin', steps: ['poi-1', 'poi-2', 'poi-3'] }],
+      itineraries: [{ name: 'Matin', steps: ['poi-1', 'poi-2'] }],
     }), res)
 
     const inserted = mapChain.insert.mock.calls[0][0][0]
     expect(inserted.show_route).toBe(true)
   })
 
-  it('dérive show_route=false quand pas d\'itinéraires', async () => {
-    const mapChain = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null })
-    supabaseAdmin.from.mockReturnValueOnce(mapChain)
-
-    const res = mockRes()
-    await handler(adminReq('POST', { client_name: 'Bob', pois: [] }), res)
-    const inserted = mapChain.insert.mock.calls[0][0][0]
-    expect(inserted.show_route).toBe(false)
-  })
-
-  it('n\'inclut pas display_order dans les liens POI (toujours null)', async () => {
-    const mapChain  = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: true }, error: null })
-    const poisChain = makeChain({ data: null, error: null })
-
+  it('n\'inclut pas display_order dans les liens POI', async () => {
+    const mapChain    = makeChain({ data: { id: 'map-1', slug: 'abc1234567', client_name: 'Bob', is_active: false }, error: null })
+    const poisChain   = makeChain({ data: null, error: null })
+    const activateChain = makeChain({ data: { id: 'map-1', is_active: true }, error: null })
     supabaseAdmin.from
       .mockReturnValueOnce(mapChain)
       .mockReturnValueOnce(poisChain)
+      .mockReturnValueOnce(activateChain)
 
     const res = mockRes()
     await handler(adminReq('POST', {

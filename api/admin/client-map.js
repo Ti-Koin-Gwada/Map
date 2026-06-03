@@ -21,12 +21,15 @@ export default async function handler(req, res) {
     const slug = nanoid(10)
     const show_route = itineraries.some(it => it.steps?.length >= 2)
 
+    // Create inactive to avoid a partially-written active card on failure
     const { data: map, error: mapErr } = await supabaseAdmin
       .from('client_maps')
-      .insert([{ slug, client_name, forfait, notes, show_route, is_active: true }])
+      .insert([{ slug, client_name, forfait, notes, show_route, is_active: false }])
       .select()
       .single()
     if (mapErr) return res.status(500).json({ error: mapErr.message })
+
+    const rollback = () => supabaseAdmin.from('client_maps').delete().eq('id', map.id)
 
     if (pois.length > 0) {
       const links = pois.map(p => ({
@@ -36,7 +39,7 @@ export default async function handler(req, res) {
         display_order: null,
       }))
       const { error: linksErr } = await supabaseAdmin.from('client_map_pois').insert(links)
-      if (linksErr) return res.status(500).json({ error: linksErr.message })
+      if (linksErr) { await rollback(); return res.status(500).json({ error: linksErr.message }) }
     }
 
     for (const it of itineraries) {
@@ -46,14 +49,23 @@ export default async function handler(req, res) {
         .insert([{ client_map_id: map.id, name: it.name || 'Itinéraire' }])
         .select()
         .single()
-      if (itinErr) return res.status(500).json({ error: itinErr.message })
+      if (itinErr) { await rollback(); return res.status(500).json({ error: itinErr.message }) }
 
       const steps = it.steps.map((poi_id, i) => ({ itinerary_id: itin.id, poi_id, step_order: i }))
       const { error: stepsErr } = await supabaseAdmin.from('itinerary_steps').insert(steps)
-      if (stepsErr) return res.status(500).json({ error: stepsErr.message })
+      if (stepsErr) { await rollback(); return res.status(500).json({ error: stepsErr.message }) }
     }
 
-    return res.status(201).json(map)
+    // All inserts succeeded — activate the card
+    const { data: activated, error: activateErr } = await supabaseAdmin
+      .from('client_maps')
+      .update({ is_active: true })
+      .eq('id', map.id)
+      .select()
+      .single()
+    if (activateErr) { await rollback(); return res.status(500).json({ error: activateErr.message }) }
+
+    return res.status(201).json(activated)
   }
 
   return res.status(405).json({ error: 'Method not allowed' })
