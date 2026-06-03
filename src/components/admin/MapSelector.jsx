@@ -78,7 +78,9 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
   // ── Handlers ──────────────────────────────────────────────
   const toggle = (id) => {
     if (buildingItinerary) {
-      if (!chosen.includes(id)) onChosenChange([...chosen, id])
+      // Building mode: only update local draftSteps — no external state update.
+      // Avoids the two-simultaneous-updater pattern that crashes Google Maps OverlayView.
+      // Chosen is updated atomically when the itinerary is confirmed.
       setDraftSteps(prev =>
         prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
       )
@@ -133,6 +135,9 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
     if (draftSteps.length < 2) return
     const name = draftName.trim() || `Itinéraire ${itineraries.length + 1}`
     onItinerariesChange([...itineraries, { name, steps: draftSteps }])
+    // Add any draft spots not yet in chosen (atomic: single external update after confirmation)
+    const newSpots = draftSteps.filter(id => !chosen.includes(id))
+    if (newSpots.length > 0) onChosenChange([...chosen, ...newSpots])
     cancelItinerary()
   }
 
@@ -152,6 +157,15 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
   }
 
   const setNote = (id, val) => onNotesChange({ ...notes, [id]: val })
+
+  // ── Pins numérotés pour le brouillon + ids effectifs pour l'affichage ──
+  const draftPinNumbers = buildingItinerary
+    ? Object.fromEntries(draftSteps.map((id, i) => [id, i + 1]))
+    : {}
+  // Include draft steps in the "chosen" set for display (non-faded, numbered)
+  const effectiveChosenIds = buildingItinerary && draftSteps.length > 0
+    ? [...new Set([...chosen, ...draftSteps])]
+    : chosen
 
   // ── Routes pour la carte (preview) ────────────────────────
   const routes = [
@@ -376,9 +390,10 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
               <MapView
                 pois={shown}
                 selectionMode
-                chosenIds={chosen}
+                chosenIds={effectiveChosenIds}
                 onToggle={toggle}
                 routes={routes}
+                pinNumbers={draftPinNumbers}
               />
               <div
                 className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-sm flex items-baseline gap-1.5"
@@ -419,9 +434,10 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
           <MapView
             pois={shown}
             selectionMode
-            chosenIds={chosen}
+            chosenIds={effectiveChosenIds}
             onToggle={toggle}
             routes={routes}
+            pinNumbers={draftPinNumbers}
           />
           <div
             className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2.5 shadow-sm flex items-baseline gap-2"

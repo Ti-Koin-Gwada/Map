@@ -94,40 +94,31 @@ describe('MapSelector — mode itinéraire', () => {
     expect(screen.getAllByText(/Mode itinéraire/i).length).toBeGreaterThan(0)
   })
 
-  it('cliquer un pin en mode itinéraire l\'ajoute aux étapes et à chosen', async () => {
+  it('cliquer un pin en mode itinéraire l\'ajoute aux étapes (chosen inchangé jusqu\'à confirmation)', async () => {
     render(<Wrapper />)
     await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
     await userEvent.click(screen.getByTestId('pin-a'))
     await userEvent.click(screen.getByTestId('pin-b'))
-    expect(screen.getByTestId('chosen-state').textContent).toBe('a,b')
+    // chosen n'est PAS modifié immédiatement — seulement sur confirmation
+    expect(screen.getByTestId('chosen-state').textContent).toBe('')
     // Le compteur d'étapes dans l'interface
     expect(screen.getByText(/2 étapes sélectionnée/i)).toBeInTheDocument()
   })
 
-  it('cliquer un pin déjà dans chosen l\'ajoute aux étapes sans doublon dans chosen', async () => {
-    render(<Wrapper initialChosen={['a']} />)
-    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
-    await userEvent.click(screen.getByTestId('pin-a'))
-    await userEvent.click(screen.getByTestId('pin-b'))
-    // 'a' était déjà dans chosen, 'b' s'ajoute
-    expect(screen.getByTestId('chosen-state').textContent).toBe('a,b')
-  })
-
-  it('confirmer un itinéraire avec nom l\'ajoute à la liste', async () => {
+  it('confirmer un itinéraire l\'ajoute à la liste et les spots rejoignent chosen', async () => {
     render(<Wrapper />)
     await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
     await userEvent.click(screen.getByTestId('pin-a'))
     await userEvent.click(screen.getByTestId('pin-b'))
-    // Cliquer "Terminer"
     await userEvent.click(screen.getByRole('button', { name: /Terminer/i }))
-    // Saisir un nom
     const input = screen.getByPlaceholderText(/Itinéraire 1/i)
     await userEvent.clear(input)
     await userEvent.type(input, 'Mon itinéraire')
-    // Valider
     await userEvent.click(screen.getByRole('button', { name: /Valider/i }))
     expect(screen.getByTestId('itineraries-count').textContent).toBe('1')
     expect(screen.getByText('Mon itinéraire')).toBeInTheDocument()
+    // Les spots du brouillon sont ajoutés à chosen après confirmation
+    expect(screen.getByTestId('chosen-state').textContent).toBe('a,b')
   })
 
   it('annuler remet à zéro sans sauvegarder', async () => {
