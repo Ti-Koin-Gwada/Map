@@ -626,7 +626,7 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
 
 /* ── Mobile filter bar ────────────────────────────────────── */
 function MobileFilterBar({ categories, filterCat, onToggle }) {
-  if (categories.length <= 1) return null
+  if (categories.length <= 1 && filterCat === null) return null
   return (
     <div
       className="absolute top-0 left-0 right-0 z-10 pt-2 pb-3"

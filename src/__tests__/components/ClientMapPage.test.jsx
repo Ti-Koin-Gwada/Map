@@ -172,6 +172,20 @@ describe('Filtre par catégorie — mobile', () => {
     await userEvent.click(screen.getByRole('button', { name: /^Tous$/i }))
     expect(mapView.dataset.count).toBe('3')
   })
+
+  it('garde le bouton "Tous" visible si le filtre actif disparaît des catégories disponibles', async () => {
+    // Filtre actif sur 'plage', puis refetch avec seulement des restaurants → barre doit rester
+    const { rerender } = renderPage()
+    await userEvent.click(screen.getByRole('button', { name: /Plages/i }))
+    // Simule un refetch avec des POI d'une seule catégorie différente
+    useClientMap.mockReturnValue(makeMap([RESTO_1]))
+    rerender(<ClientMapPage />)
+    // Le bouton "Tous" doit rester disponible malgré 1 seule catégorie
+    expect(screen.getByRole('button', { name: /^Tous$/i })).toBeInTheDocument()
+    // Cliquer "Tous" remet le filtre à zéro et les spots sont visibles
+    await userEvent.click(screen.getByRole('button', { name: /^Tous$/i }))
+    expect(screen.getByTestId('map-view').dataset.count).toBe('1')
+  })
 })
 
 // ── Reco de Flo ───────────────────────────────────────────────
