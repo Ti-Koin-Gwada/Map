@@ -41,7 +41,7 @@ describe('GET /api/map/:slug', () => {
     expect(res.body).toEqual({ error: 'inactive' })
   })
 
-  it('returns the map data with pois and notes', async () => {
+  it('returns the map data with pois, notes and itineraries', async () => {
     const poiData = { id: 'poi-1', name: 'Plage du Gosier', category: 'plage', latitude: 16.2, longitude: -61.5 }
     let callCount = 0
     mockFrom.mockImplementation(() => {
@@ -52,10 +52,14 @@ describe('GET /api/map/:slug', () => {
           error: null,
         })
       }
-      return makeChain({
-        data: [{ custom_note: 'Très belle plage', display_order: 0, pois: poiData }],
-        error: null,
-      })
+      if (callCount === 2) {
+        return makeChain({
+          data: [{ custom_note: 'Très belle plage', pois: poiData }],
+          error: null,
+        })
+      }
+      // 3rd call: itineraries
+      return makeChain({ data: [], error: null })
     })
     const res = mockRes()
     await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
@@ -64,6 +68,38 @@ describe('GET /api/map/:slug', () => {
     expect(res.body.pois).toHaveLength(1)
     expect(res.body.pois[0].name).toBe('Plage du Gosier')
     expect(res.body.notes['poi-1']).toBe('Très belle plage')
+    expect(res.body.itineraries).toEqual([])
+  })
+
+  it('retourne les itinéraires avec leurs étapes ordonnées', async () => {
+    let callCount = 0
+    mockFrom.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return makeChain({ data: { id: 'map-1', slug: 'my-map', client_name: 'Alice', is_active: true }, error: null })
+      }
+      if (callCount === 2) {
+        return makeChain({ data: [], error: null })
+      }
+      // 3rd call: itineraries with steps
+      return makeChain({
+        data: [{
+          id: 'itin-1',
+          name: 'Matin',
+          itinerary_steps: [
+            { poi_id: 'poi-2', step_order: 1 },
+            { poi_id: 'poi-1', step_order: 0 },
+          ],
+        }],
+        error: null,
+      })
+    })
+    const res = mockRes()
+    await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
+    expect(res.statusCode).toBe(200)
+    expect(res.body.itineraries).toHaveLength(1)
+    expect(res.body.itineraries[0].name).toBe('Matin')
+    expect(res.body.itineraries[0].steps).toEqual(['poi-1', 'poi-2'])
   })
 
   it('inclut show_route dans la réponse', async () => {
@@ -93,7 +129,10 @@ describe('GET /api/map/:slug', () => {
       if (callCount === 1) {
         return makeChain({ data: { id: 'map-1', slug: 'my-map', client_name: 'Alice', is_active: true }, error: null })
       }
-      return makeChain({ data: [{ custom_note: null, display_order: 0, pois: poiData }], error: null })
+      if (callCount === 2) {
+        return makeChain({ data: [{ custom_note: null, pois: poiData }], error: null })
+      }
+      return makeChain({ data: [], error: null })
     })
     const res = mockRes()
     await handler(mockReq('GET', {}, { slug: 'my-map' }), res)
@@ -116,5 +155,6 @@ describe('GET /api/map/:slug', () => {
     expect(res.statusCode).toBe(200)
     expect(res.body.pois).toHaveLength(0)
     expect(res.body.notes).toEqual({})
+    expect(res.body.itineraries).toEqual([])
   })
 })

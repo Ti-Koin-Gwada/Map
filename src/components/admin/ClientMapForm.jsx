@@ -138,7 +138,7 @@ function Step1({ form, setForm, onNext }) {
   )
 }
 
-function Step3({ form, chosen, pois, slug, onBack }) {
+function Step3({ form, chosen, pois, slug }) {
   const [copied, setCopied] = useState(false)
   const url = `${window.location.origin}/map/${slug}`
 
@@ -178,7 +178,6 @@ function Step3({ form, chosen, pois, slug, onBack }) {
           </p>
         )}
 
-        {/* URL */}
         <div
           className="flex items-center gap-2 p-2 rounded-xl mb-5"
           style={{ border: '1px solid var(--color-border)', background: 'white' }}
@@ -210,14 +209,6 @@ function Step3({ form, chosen, pois, slug, onBack }) {
           >
             <ExternalLink size={14} /> Voir la carte
           </a>
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-sm"
-            style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            ← Revenir à la sélection
-          </button>
         </div>
       </div>
     </div>
@@ -231,22 +222,19 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
   const [form, setForm]           = useState(INITIAL_FORM)
   const [chosen, setChosen]       = useState([])
   const [notes, setNotes]         = useState({})
-  const [itinerary, setItinerary]         = useState([])
-  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [itineraries, setItineraries] = useState([])
   const isMobile = useIsMobile()
 
-  const handleSave = (withItinerary = false) => {
-    const itineraryOrder = withItinerary
-      ? Object.fromEntries(itinerary.map((id, i) => [id, i]))
-      : {}
+  const handleSave = () => {
+    const show_route = itineraries.some(it => it.steps?.length >= 2)
     onSave({
       ...form,
-      show_route: withItinerary && itinerary.length >= 2,
-      pois: chosen.map((id) => ({
-        poi_id:        id,
-        custom_note:   notes[id] || null,
-        display_order: itineraryOrder[id] ?? null,
+      show_route,
+      pois: chosen.map(id => ({
+        poi_id:      id,
+        custom_note: notes[id] || null,
       })),
+      itineraries,
     })
   }
 
@@ -269,31 +257,14 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
             </button>
           </div>
           {step === 2 && (
-            <div className="flex flex-col gap-2">
-              <Button
-                variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
-                disabled={chosen.length === 0 || saving}
-                onClick={() => {
-                  if (itinerary.length >= 2 && !confirmDiscard) { setConfirmDiscard(true); return }
-                  setConfirmDiscard(false)
-                  handleSave(false)
-                }}
-                className="w-full"
-                style={confirmDiscard ? { background: '#DC2626', color: 'white', border: 'none' } : {}}
-              >
-                {saving ? 'Génération…' : confirmDiscard ? `Confirmer ? L'itinéraire sera ignoré` : `Générer (${chosen.length} spots) →`}
-              </Button>
-              {itinerary.length >= 2 && (
-                <Button
-                  variant="primary"
-                  disabled={saving}
-                  onClick={() => { setConfirmDiscard(false); handleSave(true) }}
-                  className="w-full"
-                >
-                  {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
-                </Button>
-              )}
-            </div>
+            <Button
+              variant="primary"
+              disabled={chosen.length === 0 || saving}
+              onClick={handleSave}
+              className="w-full"
+            >
+              {saving ? 'Génération…' : `Générer (${chosen.length} spots) →`}
+            </Button>
           )}
         </div>
       ) : (
@@ -311,29 +282,13 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onCancel}>Annuler</Button>
             {step === 2 && (
-              <>
-                <Button
-                  variant={itinerary.length >= 2 ? 'secondary' : 'primary'}
-                  disabled={chosen.length === 0 || saving}
-                  onClick={() => {
-                    if (itinerary.length >= 2 && !confirmDiscard) { setConfirmDiscard(true); return }
-                    setConfirmDiscard(false)
-                    handleSave(false)
-                  }}
-                  style={confirmDiscard ? { background: '#DC2626', color: 'white', border: 'none' } : {}}
-                >
-                  {saving ? 'Génération…' : confirmDiscard ? 'Confirmer sans itinéraire ?' : 'Générer la carte →'}
-                </Button>
-                {itinerary.length >= 2 && (
-                  <Button
-                    variant="primary"
-                    disabled={saving}
-                    onClick={() => { setConfirmDiscard(false); handleSave(true) }}
-                  >
-                    {saving ? 'Génération…' : `Créer un itinéraire (${itinerary.length} étapes) →`}
-                  </Button>
-                )}
-              </>
+              <Button
+                variant="primary"
+                disabled={chosen.length === 0 || saving}
+                onClick={handleSave}
+              >
+                {saving ? 'Génération…' : 'Générer la carte →'}
+              </Button>
             )}
           </div>
         </div>
@@ -342,7 +297,7 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
       <StepBar step={createdSlug ? 3 : step} setStep={setStep} />
 
       {createdSlug ? (
-        <Step3 form={form} chosen={chosen} pois={pois} slug={createdSlug} onBack={() => {}} />
+        <Step3 form={form} chosen={chosen} pois={pois} slug={createdSlug} />
       ) : step === 1 ? (
         <Step1 form={form} setForm={setForm} onNext={() => setStep(2)} />
       ) : (
@@ -353,8 +308,8 @@ export default function ClientMapForm({ pois = [], onSave, onCancel, saving, cre
           notes={notes}
           onNotesChange={setNotes}
           totalPois={pois.length}
-          itinerary={itinerary}
-          onItineraryChange={setItinerary}
+          itineraries={itineraries}
+          onItinerariesChange={setItineraries}
         />
       )}
     </div>

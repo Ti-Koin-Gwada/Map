@@ -14,12 +14,11 @@ vi.mock('../../hooks/useIsMobile.js', () => ({ useIsMobile: vi.fn() }))
 
 // MapView renders clickable markers so we can simulate user selections
 vi.mock('../../components/map/MapView.jsx', () => ({
-  default: ({ pois, onSelect, showRoute, routePois }) => (
+  default: ({ pois, onSelect, routes }) => (
     <div
       data-testid="map-view"
       data-count={pois.length}
-      data-show-route={showRoute ? 'true' : 'false'}
-      data-route-count={routePois?.length ?? 0}
+      data-route-count={routes?.[0]?.pois?.length ?? 0}
     >
       {pois.map(p => (
         <button key={p.id} data-testid={`marker-${p.id}`} onClick={() => onSelect(p.id)}>
@@ -48,6 +47,7 @@ function makeMap(pois = [PLAGE_1, PLAGE_2, RESTO_1]) {
   return {
     map: { client_name: 'Alice', notes: {} },
     pois,
+    itineraries: [],
     loading: false, is404: false, is403: false, error: null,
   }
 }
@@ -207,15 +207,15 @@ describe('Reco de Flo', () => {
 
 // ── Itinéraire ────────────────────────────────────────────────
 
-// Fixtures avec itinerary_order : PLAGE_1=étape1, RESTO_1=étape2, PLAGE_2=spot normal
-const PLAGE_1_IT  = { ...PLAGE_1, itinerary_order: 0 }
-const RESTO_1_IT  = { ...RESTO_1, itinerary_order: 1 }
-const PLAGE_2_REG = { ...PLAGE_2, itinerary_order: null }
-
 function makeItineraryMap() {
   return {
     map: { client_name: 'Alice', notes: {}, show_route: true },
-    pois: [PLAGE_1_IT, RESTO_1_IT, PLAGE_2_REG],
+    pois: [PLAGE_1, PLAGE_2, RESTO_1],
+    itineraries: [{
+      id: 'itin-1',
+      name: 'Mon itinéraire',
+      steps: ['plage-1', 'resto-1'],
+    }],
     loading: false, is404: false, is403: false, error: null,
   }
 }
@@ -226,36 +226,27 @@ describe('Itinéraire', () => {
     useIsMobile.mockReturnValue(false)
   })
 
-  it('passe showRoute=true au MapView quand map.show_route=true et itinéraire >= 2 spots', () => {
-    renderPage()
-    expect(screen.getByTestId('map-view').dataset.showRoute).toBe('true')
-  })
-
-  it('passe showRoute=false quand map.show_route=false', () => {
-    useClientMap.mockReturnValue({
-      ...makeItineraryMap(),
-      map: { client_name: 'Alice', notes: {} },
-    })
-    renderPage()
-    expect(screen.getByTestId('map-view').dataset.showRoute).toBe('false')
-  })
-
-  it('passe routePois avec uniquement les spots de l\'itinéraire (2)', () => {
+  it('passe routes avec 2 pois au MapView', () => {
     renderPage()
     expect(screen.getByTestId('map-view').dataset.routeCount).toBe('2')
+  })
+
+  it('passe routes=[] quand pas d\'itinéraires', () => {
+    useClientMap.mockReturnValue(makeMap())
+    renderPage()
+    expect(screen.getByTestId('map-view').dataset.routeCount).toBe('0')
   })
 
   it('ouvre le panneau Itinéraire quand on clique un spot de l\'itinéraire', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    expect(screen.getByText('Mon itinéraire')).toBeInTheDocument()
     expect(screen.getByText('2 étapes')).toBeInTheDocument()
   })
 
   it('affiche les deux étapes dans le panneau', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    // marker mock + panneau → plusieurs occurrences possibles, on vérifie que c'est >= 1
     expect(screen.getAllByText('Plage du Gosier').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Chez Marcel').length).toBeGreaterThanOrEqual(1)
   })
@@ -263,7 +254,6 @@ describe('Itinéraire', () => {
   it('développe le détail d\'une étape au clic', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-resto-1'))
-    // RESTO_1 est l'étape 2 — elle est déjà expanded (c'est le spot cliqué)
     expect(screen.getByText('5 rue des Flamboyants')).toBeInTheDocument()
     expect(screen.getByText('Cuisine créole.')).toBeInTheDocument()
   })
@@ -271,40 +261,37 @@ describe('Itinéraire', () => {
   it("n'ouvre pas le panneau itinéraire pour un spot régulier", async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-2'))
-    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
-    // Le panneau normal s'ouvre
+    expect(screen.queryByText('Mon itinéraire')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plage Caravelle' })).toBeInTheDocument()
   })
 
   it('ferme le panneau itinéraire au clic sur le bouton ×', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    expect(screen.getByText('Mon itinéraire')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Fermer l.itin/i }))
-    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
+    expect(screen.queryByText('Mon itinéraire')).not.toBeInTheDocument()
   })
 
   it('affiche le panneau itinéraire sur mobile (ItinerarySheet)', async () => {
     useIsMobile.mockReturnValue(true)
     renderPage()
     await userEvent.click(screen.getByTestId('marker-plage-1'))
-    expect(screen.getByText('Itinéraire')).toBeInTheDocument()
+    expect(screen.getByText('Mon itinéraire')).toBeInTheDocument()
     expect(screen.getByText('2 étapes')).toBeInTheDocument()
   })
 
   it('ne montre pas le panneau itinéraire quand aucun spot n\'est cliqué', () => {
     renderPage()
-    expect(screen.queryByText('Itinéraire')).not.toBeInTheDocument()
+    expect(screen.queryByText('Mon itinéraire')).not.toBeInTheDocument()
   })
 
   it('le lien "Y aller" dans l\'étape développée est un <a> valide, pas dans un <button>', async () => {
     renderPage()
     await userEvent.click(screen.getByTestId('marker-resto-1'))
-    // RESTO_1 est l'étape 2, expanded par défaut
     const link = screen.getByRole('link', { name: /Y aller/i })
     expect(link).toBeInTheDocument()
     expect(link.tagName).toBe('A')
-    // Fix Issue 2 : le lien ne doit pas être imbriqué dans un <button>
     expect(link.closest('button')).toBeNull()
   })
 })

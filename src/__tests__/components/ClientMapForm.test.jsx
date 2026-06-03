@@ -6,18 +6,21 @@ import userEvent from '@testing-library/user-event'
 
 vi.mock('../../hooks/useIsMobile.js', () => ({ useIsMobile: vi.fn() }))
 
-// MapSelector mock : expose des boutons pour contrôler chosen/itinerary
+// MapSelector mock expose des boutons pour contrôler chosen/itineraries
 vi.mock('../../components/admin/MapSelector.jsx', () => ({
-  default: ({ chosen, onChosenChange, itinerary, onItineraryChange }) => (
+  default: ({ chosen, onChosenChange, itineraries, onItinerariesChange }) => (
     <div data-testid="map-selector">
       <button data-testid="add-2-spots" onClick={() => onChosenChange(['poi-1', 'poi-2'])}>
         Add 2 spots
       </button>
-      <button data-testid="set-itinerary-2" onClick={() => onItineraryChange(['poi-1', 'poi-2'])}>
-        Set itinerary (2)
+      <button
+        data-testid="add-itinerary"
+        onClick={() => onItinerariesChange([{ name: 'Matin', steps: ['poi-1', 'poi-2'] }])}
+      >
+        Add itinerary
       </button>
       <span data-testid="chosen-count">{chosen.length}</span>
-      <span data-testid="itinerary-count">{itinerary.length}</span>
+      <span data-testid="itinerary-count">{itineraries.length}</span>
     </div>
   ),
 }))
@@ -40,88 +43,77 @@ async function goToStep2() {
   const input = screen.getByPlaceholderText(/Famille Martin/i)
   await userEvent.type(input, 'Alice')
   await userEvent.click(screen.getByRole('button', { name: /Continuer/i }))
-  // Ajouter 2 spots et 2 étapes dans l'itinéraire
-  await userEvent.click(screen.getByTestId('add-2-spots'))
-  await userEvent.click(screen.getByTestId('set-itinerary-2'))
 }
 
-// ── Fix 5 : confirmation avant de perdre l'itinéraire ─────────
+// ── Save sans itinéraire ──────────────────────────────────────
 
-describe('ClientMapForm — confirmation perte itinéraire (Fix Issue 5)', () => {
-  it('premier clic "Générer la carte" avec itinéraire affiche la confirmation', async () => {
+describe('ClientMapForm — save sans itinéraire', () => {
+  it('"Générer la carte" appelle onSave avec itineraries=[] et show_route=false', async () => {
     const onSave = vi.fn()
     render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
     await goToStep2()
-
-    await userEvent.click(screen.getByRole('button', { name: /Générer la carte/i }))
-
-    // onSave ne doit pas être appelé au premier clic
-    expect(onSave).not.toHaveBeenCalled()
-    // Le bouton doit afficher un message de confirmation
-    expect(screen.getByRole('button', { name: /Confirmer/i })).toBeInTheDocument()
-  })
-
-  it('deuxième clic sur "Confirmer" appelle onSave avec show_route=false', async () => {
-    const onSave = vi.fn()
-    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
-    await goToStep2()
-
-    // Premier clic → confirmation
-    await userEvent.click(screen.getByRole('button', { name: /Générer la carte/i }))
-    // Deuxième clic → save sans itinéraire
-    await userEvent.click(screen.getByRole('button', { name: /Confirmer/i }))
-
-    expect(onSave).toHaveBeenCalledOnce()
-    const savedData = onSave.mock.calls[0][0]
-    expect(savedData.show_route).toBe(false)
-    expect(savedData.pois.every(p => p.display_order === null)).toBe(true)
-  })
-
-  it('"Créer un itinéraire" appelle onSave avec show_route=true et display_order', async () => {
-    const onSave = vi.fn()
-    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
-    await goToStep2()
-
-    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
-
-    expect(onSave).toHaveBeenCalledOnce()
-    const savedData = onSave.mock.calls[0][0]
-    expect(savedData.show_route).toBe(true)
-    // Les spots de l'itinéraire ont un display_order
-    const itinerarySpots = savedData.pois.filter(p => p.display_order !== null)
-    expect(itinerarySpots.length).toBe(2)
-    expect(itinerarySpots[0].display_order).toBe(0)
-    expect(itinerarySpots[1].display_order).toBe(1)
-  })
-
-  it('"Créer un itinéraire" après confirmation remet à zéro et sauve avec itinéraire', async () => {
-    const onSave = vi.fn()
-    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
-    await goToStep2()
-
-    // Déclencher la confirmation
-    await userEvent.click(screen.getByRole('button', { name: /Générer la carte/i }))
-    expect(screen.getByRole('button', { name: /Confirmer/i })).toBeInTheDocument()
-
-    // Cliquer "Créer un itinéraire" annule la confirmation et sauve avec itinéraire
-    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
-    expect(onSave).toHaveBeenCalledOnce()
-    expect(onSave.mock.calls[0][0].show_route).toBe(true)
-  })
-
-  it('"Générer la carte" sans itinéraire sauve directement sans confirmation', async () => {
-    const onSave = vi.fn()
-    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
-
-    // Step 2 avec seulement des spots (pas d'itinéraire)
-    const input = screen.getByPlaceholderText(/Famille Martin/i)
-    await userEvent.type(input, 'Alice')
-    await userEvent.click(screen.getByRole('button', { name: /Continuer/i }))
     await userEvent.click(screen.getByTestId('add-2-spots'))
-    // Pas de setItinerary → itinerary.length = 0
 
     await userEvent.click(screen.getByRole('button', { name: /Générer/i }))
+
     expect(onSave).toHaveBeenCalledOnce()
-    expect(onSave.mock.calls[0][0].show_route).toBe(false)
+    const saved = onSave.mock.calls[0][0]
+    expect(saved.itineraries).toEqual([])
+    expect(saved.show_route).toBe(false)
+    expect(saved.pois).toHaveLength(2)
+  })
+
+  it('"Générer la carte" est désactivé quand aucun spot sélectionné', async () => {
+    render(<ClientMapForm pois={POIS} onSave={vi.fn()} onCancel={() => {}} saving={false} />)
+    await goToStep2()
+    expect(screen.getByRole('button', { name: /Générer/i })).toBeDisabled()
+  })
+})
+
+// ── Save avec itinéraire ──────────────────────────────────────
+
+describe('ClientMapForm — save avec itinéraire', () => {
+  it('"Générer la carte" appelle onSave avec itineraries=[{name, steps}] et show_route=true', async () => {
+    const onSave = vi.fn()
+    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
+    await goToStep2()
+    await userEvent.click(screen.getByTestId('add-2-spots'))
+    await userEvent.click(screen.getByTestId('add-itinerary'))
+
+    await userEvent.click(screen.getByRole('button', { name: /Générer/i }))
+
+    expect(onSave).toHaveBeenCalledOnce()
+    const saved = onSave.mock.calls[0][0]
+    expect(saved.itineraries).toHaveLength(1)
+    expect(saved.itineraries[0].name).toBe('Matin')
+    expect(saved.itineraries[0].steps).toEqual(['poi-1', 'poi-2'])
+    expect(saved.show_route).toBe(true)
+  })
+
+  it('les pois dans le payload n\'ont pas de display_order', async () => {
+    const onSave = vi.fn()
+    render(<ClientMapForm pois={POIS} onSave={onSave} onCancel={() => {}} saving={false} />)
+    await goToStep2()
+    await userEvent.click(screen.getByTestId('add-2-spots'))
+
+    await userEvent.click(screen.getByRole('button', { name: /Générer/i }))
+
+    const saved = onSave.mock.calls[0][0]
+    expect(saved.pois.every(p => !('display_order' in p))).toBe(true)
+  })
+})
+
+// ── Mobile ────────────────────────────────────────────────────
+
+describe('ClientMapForm — mobile', () => {
+  beforeEach(() => {
+    useIsMobile.mockReturnValue(true)
+  })
+
+  it('affiche le bouton Générer sur mobile à l\'étape 2', async () => {
+    render(<ClientMapForm pois={POIS} onSave={vi.fn()} onCancel={() => {}} saving={false} />)
+    await goToStep2()
+    await userEvent.click(screen.getByTestId('add-2-spots'))
+    expect(screen.getByRole('button', { name: /Générer/i })).toBeInTheDocument()
   })
 })

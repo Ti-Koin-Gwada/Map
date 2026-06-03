@@ -90,3 +90,27 @@ CREATE TRIGGER pois_updated_at
 CREATE TRIGGER client_maps_updated_at
   BEFORE UPDATE ON client_maps
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ── Itinéraires multiples par carte client ────────────────────
+CREATE TABLE IF NOT EXISTS itineraries (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_map_id  UUID NOT NULL REFERENCES client_maps(id) ON DELETE CASCADE,
+  name           TEXT NOT NULL DEFAULT 'Itinéraire',
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE itineraries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role only" ON itineraries
+  USING (auth.role() = 'service_role');
+
+CREATE TABLE IF NOT EXISTS itinerary_steps (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  itinerary_id  UUID NOT NULL REFERENCES itineraries(id) ON DELETE CASCADE,
+  poi_id        UUID NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  step_order    INTEGER NOT NULL,
+  UNIQUE(itinerary_id, poi_id)
+);
+
+ALTER TABLE itinerary_steps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role only" ON itinerary_steps
+  USING (auth.role() = 'service_role');

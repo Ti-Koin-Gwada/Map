@@ -6,6 +6,7 @@ import MapView from '../components/map/MapView.jsx'
 import Chip from '../components/ui/Chip.jsx'
 import { CATEGORIES } from '../lib/constants.js'
 import { X, MapPin, Navigation, Instagram, BookOpen, Route } from 'lucide-react'
+import { ROUTE_COLORS } from '../lib/constants.js'
 
 function MenuViewer({ src, onClose }) {
   useEffect(() => {
@@ -49,7 +50,7 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
 }
 
 /* ── Itinerary panel desktop ──────────────────────────────── */
-function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClose }) {
+function ItineraryPanel({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary }) {
   return (
     <div
       className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col overflow-hidden"
@@ -58,13 +59,13 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         style={{ borderBottom: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-2">
-          <Route size={14} color="var(--color-forest)" />
+          <Route size={14} style={{ color: itinerary?.color || 'var(--color-forest)' }} />
           <span className="font-serif italic font-semibold text-base" style={{ color: 'var(--color-forest-dark)' }}>
-            Itinéraire
+            {itinerary?.name || 'Itinéraire'}
           </span>
           <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-            style={{ background: 'var(--color-forest)', color: 'white' }}>
-            {itineraryPois.length} étapes
+            style={{ background: itinerary?.color || 'var(--color-forest)', color: 'white' }}>
+            {itinerary?.pois?.length ?? 0} étapes
           </span>
         </div>
         <button type="button" onClick={onClose} aria-label="Fermer l'itinéraire"
@@ -73,15 +74,33 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
           <X size={13} color="var(--color-text-secondary)" />
         </button>
       </div>
+      {allItineraries?.length > 1 && (
+        <div className="flex gap-1.5 px-3 py-2 flex-shrink-0 overflow-x-auto" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          {allItineraries.map(it => (
+            <button
+              key={it.id}
+              type="button"
+              onClick={() => onSelectItinerary(it.id)}
+              className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 transition-all"
+              style={{
+                background: it.id === itinerary?.id ? (it.color || 'var(--color-forest)') : 'var(--color-border)',
+                color: it.id === itinerary?.id ? 'white' : 'var(--color-text-secondary)',
+              }}
+            >
+              {it.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto tk-scroll px-3 py-3 flex flex-col gap-2">
-        {itineraryPois.map((poi, i) => {
+        {(itinerary?.pois ?? []).map((poi, i) => {
           const cat = CATEGORIES[poi.category]
           const customNote = notes?.[poi.id]
           const isExpanded = expandedId === poi.id
-          const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+          const gmapsUrl = poi.address
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
           return (
-            // Fix Issue 2 — <a> à l'intérieur d'un <button> est du HTML invalide.
-            // Le conteneur extérieur est un <div>, seul l'en-tête est un <button>.
             <div
               key={poi.id}
               className="rounded-xl transition-all overflow-hidden"
@@ -97,7 +116,7 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
               >
                 <div className="flex items-center gap-2.5 px-3 py-2.5">
                   <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                    style={{ background: itinerary?.color || 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
                   <span className="flex-1 font-serif italic font-semibold text-sm truncate"
                     style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
@@ -143,8 +162,8 @@ function ItineraryPanel({ itineraryPois, notes, expandedId, onExpandStep, onClos
 }
 
 /* ── Itinerary sheet mobile ───────────────────────────────── */
-function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClose }) {
-  if (!itineraryPois.length) return null
+function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpandStep, onClose, onSelectItinerary }) {
+  if (!itinerary?.pois?.length) return null
   return (
     <div
       className="absolute inset-0 z-20 flex flex-col justify-end"
@@ -161,15 +180,15 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
         <div className="flex items-center justify-between px-5 py-2 flex-shrink-0"
           style={{ borderBottom: '1px solid var(--color-border)' }}>
           <div className="flex items-center gap-2">
-            <Route size={15} color="var(--color-forest)" />
+            <Route size={15} style={{ color: itinerary.color || 'var(--color-forest)' }} />
             <span className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
-              Itinéraire
+              {itinerary.name}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-              style={{ background: 'var(--color-forest)', color: 'white' }}>
-              {itineraryPois.length} étapes
+              style={{ background: itinerary.color || 'var(--color-forest)', color: 'white' }}>
+              {itinerary.pois.length} étapes
             </span>
             <button type="button" onClick={onClose} aria-label="Fermer l'itinéraire"
               className="w-8 h-8 flex items-center justify-center rounded-full"
@@ -178,15 +197,35 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
             </button>
           </div>
         </div>
+        {allItineraries?.length > 1 && (
+          <div className="flex gap-1.5 px-4 py-2 flex-shrink-0 overflow-x-auto" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            {allItineraries.map(it => (
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => onSelectItinerary(it.id)}
+                className="px-3 py-1 rounded-full text-xs font-semibold flex-shrink-0 transition-all"
+                style={{
+                  background: it.id === itinerary?.id ? (it.color || 'var(--color-forest)') : 'var(--color-border)',
+                  color: it.id === itinerary?.id ? 'white' : 'var(--color-text-secondary)',
+                }}
+              >
+                {it.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div
           className="flex-1 overflow-y-auto tk-scroll px-4 py-3 flex flex-col gap-2"
           style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
         >
-          {itineraryPois.map((poi, i) => {
+          {itinerary.pois.map((poi, i) => {
             const cat = CATEGORIES[poi.category]
             const customNote = notes?.[poi.id]
             const isExpanded = expandedId === poi.id
-            const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+            const gmapsUrl = poi.address
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
             return (
               <div
                 key={poi.id}
@@ -203,7 +242,7 @@ function ItinerarySheet({ itineraryPois, notes, expandedId, onExpandStep, onClos
                 >
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                      style={{ background: 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
+                      style={{ background: itinerary.color || 'var(--color-forest)', color: 'white' }}>{i + 1}</span>
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cat?.color || '#ccc' }} />
                     <span className="flex-1 font-serif italic font-semibold text-base truncate"
                       style={{ color: 'var(--color-forest-dark)' }}>{poi.name}</span>
@@ -671,12 +710,12 @@ function Page403() {
 /* ── Main ─────────────────────────────────────────────────── */
 export default function ClientMapPage() {
   const { slug } = useParams()
-  const { map, pois, loading, is404, is403, error } = useClientMap(slug)
-  const [selectedId, setSelectedId]         = useState(null)
-  const [menuSrc, setMenuSrc]               = useState(null)
-  const [filterCat, setFilterCat]           = useState(null)
-  const [itineraryOpen, setItineraryOpen]   = useState(false)
-  const [expandedStepId, setExpandedStepId] = useState(null)
+  const { map, pois, itineraries: rawItineraries, loading, is404, is403, error } = useClientMap(slug)
+  const [selectedId, setSelectedId]             = useState(null)
+  const [menuSrc, setMenuSrc]                   = useState(null)
+  const [filterCat, setFilterCat]               = useState(null)
+  const [activeItineraryId, setActiveItineraryId] = useState(null)
+  const [expandedStepId, setExpandedStepId]     = useState(null)
   const isMobile = useIsMobile()
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
@@ -691,24 +730,44 @@ export default function ClientMapPage() {
       .filter(c => c.label),
     [pois]
   )
-  const itineraryPois = useMemo(
-    () => pois.filter(p => p.itinerary_order != null)
-      .sort((a, b) => a.itinerary_order - b.itinerary_order),
-    [pois]
+
+  const poiById = useMemo(() => Object.fromEntries(pois.map(p => [p.id, p])), [pois])
+  const resolvedItineraries = useMemo(
+    () => rawItineraries.map((it, idx) => ({
+      ...it,
+      pois: it.steps.map(id => poiById[id]).filter(Boolean),
+      color: ROUTE_COLORS[idx % ROUTE_COLORS.length],
+    })),
+    [rawItineraries, poiById]
   )
-  const hasItinerary = !!map?.show_route && itineraryPois.length >= 2
+  const hasItinerary = resolvedItineraries.some(it => it.pois.length >= 2)
+  const activeItinerary = resolvedItineraries.find(it => it.id === activeItineraryId) ?? null
+  const itineraryOpen = activeItineraryId !== null
+
+  const routes = useMemo(
+    () => resolvedItineraries
+      .filter(it => it.pois.length >= 2)
+      .map(it => ({ pois: it.pois, color: it.color })),
+    [resolvedItineraries]
+  )
+  const pinNumbers = useMemo(
+    () => activeItinerary
+      ? Object.fromEntries(activeItinerary.pois.map((p, i) => [p.id, i + 1]))
+      : {},
+    [activeItinerary]
+  )
 
   const handleSelect = (id) => {
-    const poi = pois.find(p => p.id === id)
-    if (hasItinerary && poi?.itinerary_order != null) {
-      setItineraryOpen(true)
+    const itinerary = resolvedItineraries.find(it => it.steps.includes(id))
+    if (hasItinerary && itinerary) {
+      setActiveItineraryId(itinerary.id)
       setExpandedStepId(id)
       setSelectedId(null)
       setMenuSrc(null)
     } else {
       setSelectedId(id)
       setMenuSrc(null)
-      setItineraryOpen(false)
+      setActiveItineraryId(null)
       setExpandedStepId(null)
     }
   }
@@ -723,7 +782,7 @@ export default function ClientMapPage() {
   }
 
   const closeItinerary = () => {
-    setItineraryOpen(false)
+    setActiveItineraryId(null)
     setExpandedStepId(null)
   }
 
@@ -777,8 +836,8 @@ export default function ClientMapPage() {
           pois={filteredPois}
           selectedId={selectedId}
           onSelect={handleSelect}
-          showRoute={hasItinerary}
-          routePois={itineraryPois}
+          routes={routes}
+          pinNumbers={pinNumbers}
         />
 
         {isMobile ? (
@@ -790,13 +849,26 @@ export default function ClientMapPage() {
                 onToggle={toggleFilter}
               />
             )}
+            {hasItinerary && !itineraryOpen && !selectedPoi && (
+              <button
+                type="button"
+                onClick={() => setActiveItineraryId(resolvedItineraries[0]?.id)}
+                className="absolute bottom-20 right-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-sm font-semibold text-white"
+                style={{ background: 'var(--color-forest)' }}
+              >
+                <Route size={14} />
+                {resolvedItineraries.length > 1 ? `Itinéraires (${resolvedItineraries.length})` : 'Itinéraire'}
+              </button>
+            )}
             {itineraryOpen && (
               <ItinerarySheet
-                itineraryPois={itineraryPois}
+                itinerary={activeItinerary}
+                allItineraries={resolvedItineraries}
                 notes={map?.notes}
                 expandedId={expandedStepId}
                 onExpandStep={setExpandedStepId}
                 onClose={closeItinerary}
+                onSelectItinerary={setActiveItineraryId}
               />
             )}
             {!itineraryOpen && selectedPoi && (
@@ -812,11 +884,13 @@ export default function ClientMapPage() {
           <>
             {itineraryOpen && (
               <ItineraryPanel
-                itineraryPois={itineraryPois}
+                itinerary={activeItinerary}
+                allItineraries={resolvedItineraries}
                 notes={map?.notes}
                 expandedId={expandedStepId}
                 onExpandStep={setExpandedStepId}
                 onClose={closeItinerary}
+                onSelectItinerary={setActiveItineraryId}
               />
             )}
             {!itineraryOpen && pois.length > 0 && (
@@ -831,6 +905,17 @@ export default function ClientMapPage() {
                 filterCat={filterCat}
                 onToggle={toggleFilter}
               />
+            )}
+            {hasItinerary && !itineraryOpen && (
+              <button
+                type="button"
+                onClick={() => setActiveItineraryId(resolvedItineraries[0]?.id)}
+                className="absolute bottom-6 left-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-sm font-semibold text-white"
+                style={{ background: 'var(--color-forest)' }}
+              >
+                <Route size={14} />
+                {resolvedItineraries.length > 1 ? `Itinéraires (${resolvedItineraries.length})` : 'Itinéraire'}
+              </button>
             )}
             {/* Watermark desktop */}
             <div

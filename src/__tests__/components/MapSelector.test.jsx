@@ -32,13 +32,13 @@ const POIS = [
 
 // ── Wrapper avec état contrôlé ─────────────────────────────────
 
-function Wrapper({ initialChosen = [], initialItinerary = [], onChosenChange, onItineraryChange } = {}) {
+function Wrapper({ initialChosen = [], initialItineraries = [], onChosenChange, onItinerariesChange } = {}) {
   const [chosen, setChosen] = useState(initialChosen)
-  const [itinerary, setItinerary] = useState(initialItinerary)
+  const [itineraries, setItineraries] = useState(initialItineraries)
   const [notes, setNotes] = useState({})
 
   const handleChosenChange = (v) => { setChosen(v); onChosenChange?.(v) }
-  const handleItineraryChange = (v) => { setItinerary(v); onItineraryChange?.(v) }
+  const handleItinerariesChange = (v) => { setItineraries(v); onItinerariesChange?.(v) }
 
   return (
     <>
@@ -48,79 +48,105 @@ function Wrapper({ initialChosen = [], initialItinerary = [], onChosenChange, on
         onChosenChange={handleChosenChange}
         notes={notes}
         onNotesChange={setNotes}
-        itinerary={itinerary}
-        onItineraryChange={handleItineraryChange}
+        itineraries={itineraries}
+        onItinerariesChange={handleItinerariesChange}
         totalPois={POIS.length}
       />
       <span data-testid="chosen-state">{chosen.join(',')}</span>
-      <span data-testid="itinerary-state">{itinerary.join(',')}</span>
+      <span data-testid="itineraries-count">{itineraries.length}</span>
     </>
   )
 }
 
-// ── Fix 3 : toggle déselectionne spot + itinéraire ─────────────
+// ── Mode normal : toggle ──────────────────────────────────────
 
-describe('MapSelector — toggle (Fix Issue 3)', () => {
-  it('ajouter un spot au clic pin : chosen +1, itinéraire inchangé', async () => {
+describe('MapSelector — toggle en mode normal', () => {
+  it('ajouter un spot au clic pin : chosen +1', async () => {
     render(<Wrapper />)
     await userEvent.click(screen.getByTestId('pin-a'))
     expect(screen.getByTestId('chosen-state').textContent).toBe('a')
-    expect(screen.getByTestId('itinerary-state').textContent).toBe('')
   })
 
-  it('retirer un spot choisi mais hors itinéraire : seulement chosen -1', async () => {
+  it('retirer un spot choisi : chosen -1', async () => {
     render(<Wrapper initialChosen={['a']} />)
-    // Le spot 'a' est dans chosen mais pas dans itinerary
     await userEvent.click(screen.getByTestId('pin-a'))
     expect(screen.getByTestId('chosen-state').textContent).toBe('')
-    expect(screen.getByTestId('itinerary-state').textContent).toBe('')
   })
 
-  it('retirer un spot dans l\'itinéraire : l\'enlève de chosen ET de l\'itinéraire', async () => {
-    render(<Wrapper initialChosen={['a', 'b']} initialItinerary={['a']} />)
-    // 'a' est dans chosen ET dans itinerary → clic pin-a doit l'enlever des deux
-    await userEvent.click(screen.getByTestId('pin-a'))
-    expect(screen.getByTestId('chosen-state').textContent).toBe('b')
-    expect(screen.getByTestId('itinerary-state').textContent).toBe('')
-  })
-
-  it('toggle n\'affecte pas l\'itinéraire quand le spot n\'est pas dans l\'itinéraire', async () => {
-    render(<Wrapper initialChosen={['a', 'b']} initialItinerary={['b']} />)
-    // retirer 'a' (pas dans itinerary) → itinerary reste ['b']
-    await userEvent.click(screen.getByTestId('pin-a'))
-    expect(screen.getByTestId('chosen-state').textContent).toBe('b')
-    expect(screen.getByTestId('itinerary-state').textContent).toBe('b')
-  })
-})
-
-// ── Fix 3 : removeSpot (bouton ×) ─────────────────────────────
-
-describe('MapSelector — removeSpot via ×', () => {
-  it('le bouton × retire le spot de chosen ET de l\'itinéraire', async () => {
-    render(<Wrapper initialChosen={['a', 'b']} initialItinerary={['a']} />)
-    // 'Plage A' apparaît dans SpotRow ET dans ItineraryRow — on prend le 1er (SpotRow)
+  it('retirer un spot via × le retire de chosen', async () => {
+    render(<Wrapper initialChosen={['a', 'b']} />)
     const plageAName = screen.getAllByText('Plage A')[0]
-    const flexRow = plageAName.parentElement // div flex contenant dot + nom + boutons
-    // Le bouton × du SpotRow n'a pas de title (le toggle itinéraire en a un)
-    const removeBtn = flexRow.querySelector('button:not([title])')
+    const flexRow = plageAName.parentElement
+    const removeBtn = flexRow.querySelector('button')
     await userEvent.click(removeBtn)
-
     expect(screen.getByTestId('chosen-state').textContent).toBe('b')
-    expect(screen.getByTestId('itinerary-state').textContent).toBe('')
   })
 })
 
-// ── Fix 6 : precompute itineraryOrder — rendu correct des numéros ──
+// ── Mode itinéraire ───────────────────────────────────────────
 
-describe('MapSelector — numérotation itinéraire (Fix Issue 6)', () => {
-  it('les badges dans SpotRow affichent le bon index d\'ordre', () => {
-    render(<Wrapper initialChosen={['a', 'b', 'c']} initialItinerary={['c', 'a']} />)
-    // itinerary = ['c', 'a'] → itineraryOrder = { c: 0, a: 1 }
-    // chosen order: a → badge '2', b → badge '+', c → badge '1'
-    // Les boutons "Retirer de l'itinéraire" (title) sont dans l'ordre du chosen array
-    const inItineraryBtns = screen.getAllByTitle("Retirer de l'itinéraire")
-    expect(inItineraryBtns).toHaveLength(2)
-    expect(inItineraryBtns[0].textContent).toBe('2') // 'a' est à l'index 1 → affiche 2
-    expect(inItineraryBtns[1].textContent).toBe('1') // 'c' est à l'index 0 → affiche 1
+describe('MapSelector — mode itinéraire', () => {
+  it('bouton "Créer un itinéraire" est présent quand pas en mode', () => {
+    render(<Wrapper />)
+    expect(screen.getByRole('button', { name: /Créer un itinéraire/i })).toBeInTheDocument()
+  })
+
+  it('entrer en mode itinéraire change l\'interface', async () => {
+    render(<Wrapper />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    expect(screen.getAllByText(/Mode itinéraire/i).length).toBeGreaterThan(0)
+  })
+
+  it('cliquer un pin en mode itinéraire l\'ajoute aux étapes et à chosen', async () => {
+    render(<Wrapper />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    await userEvent.click(screen.getByTestId('pin-a'))
+    await userEvent.click(screen.getByTestId('pin-b'))
+    expect(screen.getByTestId('chosen-state').textContent).toBe('a,b')
+    // Le compteur d'étapes dans l'interface
+    expect(screen.getByText(/2 étapes sélectionnée/i)).toBeInTheDocument()
+  })
+
+  it('cliquer un pin déjà dans chosen l\'ajoute aux étapes sans doublon dans chosen', async () => {
+    render(<Wrapper initialChosen={['a']} />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    await userEvent.click(screen.getByTestId('pin-a'))
+    await userEvent.click(screen.getByTestId('pin-b'))
+    // 'a' était déjà dans chosen, 'b' s'ajoute
+    expect(screen.getByTestId('chosen-state').textContent).toBe('a,b')
+  })
+
+  it('confirmer un itinéraire avec nom l\'ajoute à la liste', async () => {
+    render(<Wrapper />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    await userEvent.click(screen.getByTestId('pin-a'))
+    await userEvent.click(screen.getByTestId('pin-b'))
+    // Cliquer "Terminer"
+    await userEvent.click(screen.getByRole('button', { name: /Terminer/i }))
+    // Saisir un nom
+    const input = screen.getByPlaceholderText(/Itinéraire 1/i)
+    await userEvent.clear(input)
+    await userEvent.type(input, 'Mon itinéraire')
+    // Valider
+    await userEvent.click(screen.getByRole('button', { name: /Valider/i }))
+    expect(screen.getByTestId('itineraries-count').textContent).toBe('1')
+    expect(screen.getByText('Mon itinéraire')).toBeInTheDocument()
+  })
+
+  it('annuler remet à zéro sans sauvegarder', async () => {
+    render(<Wrapper />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    await userEvent.click(screen.getByTestId('pin-a'))
+    await userEvent.click(screen.getByRole('button', { name: /Annuler/i }))
+    expect(screen.getByTestId('itineraries-count').textContent).toBe('0')
+    expect(screen.getByRole('button', { name: /Créer un itinéraire/i })).toBeInTheDocument()
+  })
+
+  it('"Terminer" est désactivé avec moins de 2 étapes', async () => {
+    render(<Wrapper />)
+    await userEvent.click(screen.getByRole('button', { name: /Créer un itinéraire/i }))
+    await userEvent.click(screen.getByTestId('pin-a'))
+    const terminerBtn = screen.getByRole('button', { name: /Terminer/i })
+    expect(terminerBtn).toBeDisabled()
   })
 })

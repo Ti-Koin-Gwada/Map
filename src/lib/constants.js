@@ -24,3 +24,5 @@ export const FORFAIT_OPTIONS = [
 
 export const MAP_CENTER = { lat: 16.265, lng: -61.551 } // Guadeloupe
 export const MAP_ZOOM   = 10
+
+export const ROUTE_COLORS = ['#2D5A3D', '#B45309', '#1D4ED8', '#7C3AED', '#B91C1C']

@@ -18,14 +18,13 @@ export default async function handler(req, res) {
     .single()
 
   if (mapErr || !map) return res.status(404).json({ error: 'not_found' })
-  if (!map.is_active)  return res.status(403).json({ error: 'inactive' })
+  if (!map.is_active) return res.status(403).json({ error: 'inactive' })
 
   // 2. Récupérer les POIs liés (avec les notes)
   const { data: links, error: linksErr } = await supabase
     .from('client_map_pois')
     .select(`
       custom_note,
-      display_order,
       pois (
         id, name, description, details, category,
         address, latitude, longitude,
@@ -34,19 +33,31 @@ export default async function handler(req, res) {
       )
     `)
     .eq('client_map_id', map.id)
-    .order('display_order', { ascending: true, nullsFirst: false })
 
   if (linksErr) return res.status(500).json({ error: 'server_error' })
 
-  // 3. Construire la réponse — les notes sont indexées par poi_id
   const pois = []
   const notes = {}
-
   for (const link of links ?? []) {
     if (!link.pois) continue
-    pois.push({ ...link.pois, itinerary_order: link.display_order })
+    pois.push(link.pois)
     if (link.custom_note) notes[link.pois.id] = link.custom_note
   }
+
+  // 3. Récupérer les itinéraires avec leurs étapes
+  const { data: itiData } = await supabase
+    .from('itineraries')
+    .select(`id, name, itinerary_steps ( poi_id, step_order )`)
+    .eq('client_map_id', map.id)
+    .order('created_at', { ascending: true })
+
+  const itineraries = (itiData ?? []).map(it => ({
+    id:    it.id,
+    name:  it.name,
+    steps: (it.itinerary_steps ?? [])
+      .sort((a, b) => a.step_order - b.step_order)
+      .map(s => s.poi_id),
+  }))
 
   return res.status(200).json({
     client_name: map.client_name,
@@ -55,5 +66,6 @@ export default async function handler(req, res) {
     show_route:  map.show_route,
     pois,
     notes,
+    itineraries,
   })
 }

@@ -47,7 +47,7 @@ function MapTypeSelector({ value, onChange }) {
 }
 
 // ── Route polyline (Google Maps) ─────────────────────────────
-function RoutePolyline({ pois }) {
+function RoutePolyline({ pois, color = '#2D5A3D', dashed = false }) {
   const map = useMap()
 
   useEffect(() => {
@@ -60,25 +60,22 @@ function RoutePolyline({ pois }) {
     const line = new window.google.maps.Polyline({
       path,
       geodesic: true,
-      strokeColor: '#2D5A3D',
-      strokeOpacity: 0.75,
+      strokeColor: color,
+      strokeOpacity: dashed ? 0 : 0.75,
       strokeWeight: 3,
+      icons: dashed ? [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.75, scale: 3 }, offset: '0', repeat: '10px' }] : [],
       map,
     })
     return () => line.setMap(null)
-  }, [map, pois])
+  }, [map, pois, color, dashed])
 
   return null
 }
 
 // ── Google Maps ──────────────────────────────────────────────
-function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, showRoute, routePois }) {
+function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }) {
   const [mapType, setMapType] = useState('terrain')
   const isSatellite = mapType === 'satellite' || mapType === 'hybrid'
-
-  const routeOrder = showRoute
-    ? routePois.reduce((acc, p, i) => { acc[p.id] = i + 1; return acc }, {})
-    : {}
 
   return (
     <div className="relative w-full h-full">
@@ -94,13 +91,22 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
         styles={isSatellite ? [] : MAP_STYLES_CLEAN}
         style={{ width: '100%', height: '100%' }}
       >
-        {showRoute && routePois.length > 1 && <RoutePolyline pois={routePois} />}
+        {routes.map((route, i) =>
+          route.pois.length > 1 && (
+            <RoutePolyline
+              key={i}
+              pois={route.pois}
+              color={route.color}
+              dashed={route.dashed}
+            />
+          )
+        )}
         {pois.map(poi => {
           if (!poi.latitude || !poi.longitude) return null
           const cat        = CATEGORIES[poi.category]
           const isSelected = selectedId === poi.id
           const isChosen   = chosenIds?.includes(poi.id)
-          const routeNum   = routeOrder[poi.id]
+          const routeNum   = pinNumbers?.[poi.id]
           return (
             <HtmlMarker
               key={poi.id}
@@ -111,7 +117,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
                 selected={isSelected || isChosen}
                 dimmed={selectionMode ? false : (selectedId && !isSelected)}
                 faded={selectionMode && !isChosen}
-                check={!showRoute && isChosen}
+                check={!routeNum && isChosen}
                 number={routeNum}
                 title={poi.name}
                 onClick={() => selectionMode ? onToggle?.(poi.id) : onSelect?.(poi.id)}
@@ -127,7 +133,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
 }
 
 // ── SVG Map fallback ─────────────────────────────────────────
-function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, showRoute, routePois }) {
+function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }) {
   const ref  = useRef(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
 
@@ -157,30 +163,28 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
     top:  offY + (SVG_Y_MAX - ((lat - LAT_MIN) / (LAT_MAX - LAT_MIN)) * (SVG_Y_MAX - SVG_Y_MIN)) * scale,
   })
 
-  const routeOrder = showRoute
-    ? routePois.reduce((acc, p, i) => { acc[p.id] = i + 1; return acc }, {})
-    : {}
-
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden" style={{ background: '#D4EBF0' }}>
       <GuadeloupeSVG />
       <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-1.5 rounded-full font-medium z-10 whitespace-nowrap">
         Mode aperçu — ajoutez VITE_GOOGLE_MAPS_KEY pour la carte réelle
       </div>
-      {showRoute && scale > 0 && routePois.length > 1 && (
-        <svg className="absolute inset-0 pointer-events-none" width={box.w} height={box.h}>
-          <polyline
-            points={routePois
-              .filter(p => p.latitude && p.longitude)
-              .map(p => { const pos = project(p.longitude, p.latitude); return `${pos.left},${pos.top}` })
-              .join(' ')}
-            fill="none"
-            stroke="#2D5A3D"
-            strokeWidth="2.5"
-            strokeOpacity="0.75"
-            strokeDasharray="6,4"
-          />
-        </svg>
+      {scale > 0 && routes.map((route, i) =>
+        route.pois.length > 1 && (
+          <svg key={i} className="absolute inset-0 pointer-events-none" width={box.w} height={box.h}>
+            <polyline
+              points={route.pois
+                .filter(p => p.latitude && p.longitude)
+                .map(p => { const pos = project(p.longitude, p.latitude); return `${pos.left},${pos.top}` })
+                .join(' ')}
+              fill="none"
+              stroke={route.color || '#2D5A3D'}
+              strokeWidth="2.5"
+              strokeOpacity="0.75"
+              strokeDasharray={route.dashed ? '6,4' : undefined}
+            />
+          </svg>
+        )
       )}
       {scale > 0 && pois.map(poi => {
         if (!poi.latitude || !poi.longitude) return null
@@ -188,7 +192,7 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
         const cat        = CATEGORIES[poi.category]
         const isSelected = selectedId === poi.id
         const isChosen   = chosenIds?.includes(poi.id)
-        const routeNum   = routeOrder[poi.id]
+        const routeNum   = pinNumbers?.[poi.id]
         return (
           <MarkerPin
             key={poi.id}
@@ -196,7 +200,7 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
             selected={isSelected || isChosen}
             dimmed={selectionMode ? false : (selectedId && !isSelected)}
             faded={selectionMode && !isChosen}
-            check={!showRoute && isChosen}
+            check={!routeNum && isChosen}
             number={routeNum}
             style={{ position: 'absolute', left: p.left, top: p.top }}
             title={poi.name}
@@ -211,10 +215,11 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
 export default function MapView({
   pois = [], selectedId, onSelect,
   selectionMode = false, chosenIds, onToggle,
-  showRoute = false, routePois = [],
+  routes = [],
+  pinNumbers = {},
   className = '',
 }) {
-  const props = { pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, showRoute, routePois }
+  const props = { pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }
   return (
     <div className={`relative w-full h-full ${className}`}>
       {GOOGLE_MAPS_KEY ? <GoogleMapView {...props} /> : <SVGMapCanvas {...props} />}

@@ -18,11 +18,12 @@ export function useClientMap(slug) {
 
   const status = query.error?.status
   return {
-    map:     query.data,
-    pois:    query.data?.pois ?? [],
-    loading: query.isLoading,
-    is404:   status === 404,
-    is403:   status === 403,
-    error:   query.isError,
+    map:         query.data,
+    pois:        query.data?.pois ?? [],
+    itineraries: query.data?.itineraries ?? [],
+    loading:     query.isLoading,
+    is404:       status === 404,
+    is403:       status === 403,
+    error:       query.isError,
   }
 }
