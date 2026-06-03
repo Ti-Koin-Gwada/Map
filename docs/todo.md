@@ -4,5 +4,5 @@
 [X] l'ui pour les cartes clients sur mobile dans le bas il faut retirer le nombre de spot et aussi ajouté le filtre des type de spots
 [X] retirer les tags pour les spots
 [X] par rapport a la feature d'ajout d'itinéraire quon a ajouté, c'est pas exactement comme ca qu'il fallait le faire. Je vuex que sur une meme carte il puisse y avoir des itinéraires et des spots classiques. Le bouton est bien placé mais il faudrai que ca marche comme ca : quand on appuies sur le bouton l'interface change un peu pour nous faire comprendre que l'on créer une itinéraire et ensuite on selectionne les spots dans l'ordre (on peut toujours changé l'ordre avec les fleche apres) et lorsqu'on rappuie sur le bouton cela nous demande de validé l'itinéraire et ensuite seulement on a créer une itinéraire sur notre carte et on peut continué a ajouté des spots normalement
-[] avoir la posibilité pour le client d'ajouté son domicile sur sa carte personelle
-[] le bouton Y Aller ne prend pas l'adresse mais le tittre du spot. Il faut que le bouton y allé prenne comme reference l'adresse
+[] avoir la posibilité pour le client d'ajouté son domicile sur sa carte personelle avec un pin différent symbolisant le domicile
+[] le bouton Y Aller ne prend pas l'adresse mais le titre du spot. Il faut que le bouton y allé prenne comme reference l'adresse

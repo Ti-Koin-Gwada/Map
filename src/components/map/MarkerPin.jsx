@@ -51,28 +51,27 @@ export default function MarkerPin({
           strokeWidth="1.1"
         />
         <circle cx="12" cy="11.4" r="4.3" fill="#fff" />
-        {number != null ? (
-          <text
-            x="12"
-            y="14.2"
-            textAnchor="middle"
-            fontSize="5.5"
-            fontWeight="700"
-            fontFamily="DM Sans, sans-serif"
-            fill={fill}
-          >
-            {number > 99 ? '99+' : number}
-          </text>
-        ) : check && (
-          <path
-            d="M9.6 11.4 l1.7 1.7 l3.1 -3.4"
-            fill="none"
-            stroke={color}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
+        <text
+          x="12"
+          y="14.2"
+          textAnchor="middle"
+          fontSize="5.5"
+          fontWeight="700"
+          fontFamily="DM Sans, sans-serif"
+          fill={fill}
+          display={number != null ? 'inline' : 'none'}
+        >
+          {number != null ? (number > 99 ? '99+' : number) : ''}
+        </text>
+        <path
+          d="M9.6 11.4 l1.7 1.7 l3.1 -3.4"
+          fill="none"
+          stroke={color}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          display={number == null && check ? 'inline' : 'none'}
+        />
       </svg>
     </button>
   )
