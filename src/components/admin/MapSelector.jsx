@@ -87,6 +87,15 @@ export default function MapSelector({ pois = [], chosen, onChosenChange, notes, 
     } else {
       if (chosen.includes(id)) {
         onChosenChange(chosen.filter(x => x !== id))
+        // Mirror removeSpot: keep itineraries consistent when a spot is deselected via pin click.
+        // Both are external updates → React 18 batches them into one render (no OverlayView crash).
+        const cleaned = itineraries
+          .map(it => ({ ...it, steps: it.steps.filter(s => s !== id) }))
+          .filter(it => it.steps.length > 0)
+        if (cleaned.length !== itineraries.length ||
+            cleaned.some((it, i) => it.steps.length !== itineraries[i]?.steps.length)) {
+          onItinerariesChange(cleaned)
+        }
       } else {
         onChosenChange([...chosen, id])
       }
