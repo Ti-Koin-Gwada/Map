@@ -2,6 +2,7 @@ import { Map, useMap } from '@vis.gl/react-google-maps'
 import { MAP_CENTER, MAP_ZOOM, CATEGORIES } from '../../lib/constants.js'
 import GuadeloupeSVG, { VB } from './GuadeloupeSVG.jsx'
 import MarkerPin from './MarkerPin.jsx'
+import HomePin from './HomePin.jsx'
 import HtmlMarker from './HtmlMarker.jsx'
 import { useRef, useState, useLayoutEffect, useEffect } from 'react'
 
@@ -73,7 +74,7 @@ function RoutePolyline({ pois, color = '#2D5A3D', dashed = false }) {
 }
 
 // ── Google Maps ──────────────────────────────────────────────
-function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }) {
+function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers, homeMarker, onHomeClick }) {
   const [mapType, setMapType] = useState('terrain')
   const isSatellite = mapType === 'satellite' || mapType === 'hybrid'
 
@@ -126,6 +127,15 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
             </HtmlMarker>
           )
         })}
+        {homeMarker && (
+          <HtmlMarker position={{ lat: homeMarker.lat, lng: homeMarker.lng }}>
+            <HomePin
+              onClick={onHomeClick}
+              title={homeMarker.address}
+              style={{ position: 'relative', transform: 'translate(-50%, -100%)' }}
+            />
+          </HtmlMarker>
+        )}
       </Map>
       <MapTypeSelector value={mapType} onChange={setMapType} />
     </div>
@@ -133,7 +143,7 @@ function GoogleMapView({ pois, selectedId, onSelect, selectionMode, chosenIds, o
 }
 
 // ── SVG Map fallback ─────────────────────────────────────────
-function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }) {
+function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers, homeMarker, onHomeClick }) {
   const ref  = useRef(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
 
@@ -208,6 +218,17 @@ function SVGMapCanvas({ pois, selectedId, onSelect, selectionMode, chosenIds, on
           />
         )
       })}
+      {homeMarker && homeMarker.lat && homeMarker.lng && scale > 0 && (() => {
+        const p = project(homeMarker.lng, homeMarker.lat)
+        return (
+          <HomePin
+            key="home"
+            style={{ position: 'absolute', left: p.left, top: p.top }}
+            onClick={onHomeClick}
+            title={homeMarker.address}
+          />
+        )
+      })()}
     </div>
   )
 }
@@ -217,9 +238,11 @@ export default function MapView({
   selectionMode = false, chosenIds, onToggle,
   routes = [],
   pinNumbers = {},
+  homeMarker = null,
+  onHomeClick,
   className = '',
 }) {
-  const props = { pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers }
+  const props = { pois, selectedId, onSelect, selectionMode, chosenIds, onToggle, routes, pinNumbers, homeMarker, onHomeClick }
   return (
     <div className={`relative w-full h-full ${className}`}>
       {GOOGLE_MAPS_KEY ? <GoogleMapView {...props} /> : <SVGMapCanvas {...props} />}

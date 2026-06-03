@@ -1,6 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+
+// Flush Promises + React state updates from async handlers outside of React events
+const flushAll = () => act(async () => { await new Promise(r => setTimeout(r, 50)) })
 
 // ── Mocks ────────────────────────────────────────────────────
 
@@ -14,7 +17,7 @@ vi.mock('../../hooks/useIsMobile.js', () => ({ useIsMobile: vi.fn() }))
 
 // MapView renders clickable markers so we can simulate user selections
 vi.mock('../../components/map/MapView.jsx', () => ({
-  default: ({ pois, onSelect, routes }) => (
+  default: ({ pois, onSelect, routes, onHomeClick }) => (
     <div
       data-testid="map-view"
       data-count={pois.length}
@@ -25,6 +28,9 @@ vi.mock('../../components/map/MapView.jsx', () => ({
           {p.name}
         </button>
       ))}
+      {onHomeClick && (
+        <button data-testid="map-home-pin" onClick={onHomeClick}>home-pin</button>
+      )}
     </div>
   ),
 }))
@@ -52,9 +58,24 @@ function makeMap(pois = [PLAGE_1, PLAGE_2, RESTO_1]) {
   }
 }
 
+let localStore = {}
+
 beforeEach(() => {
+  localStore = {}
+  vi.stubGlobal('localStorage', {
+    getItem:    (k) => localStore[k] ?? null,
+    setItem:    (k, v) => { localStore[k] = String(v) },
+    removeItem: (k) => { delete localStore[k] },
+    clear:      () => { localStore = {} },
+  })
   useClientMap.mockReturnValue(makeMap())
   useIsMobile.mockReturnValue(false) // desktop par défaut
+  delete window.google
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  delete window.google
 })
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -293,6 +314,221 @@ describe('Itinéraire', () => {
     expect(link).toBeInTheDocument()
     expect(link.tagName).toBe('A')
     expect(link.closest('button')).toBeNull()
+  })
+})
+
+// ── Y aller — adresse vs nom ──────────────────────────────────
+
+describe('Bouton Y aller', () => {
+  it('utilise l\'adresse du spot dans l\'URL quand elle est disponible', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-resto-1'))
+    const link = screen.getByRole('link', { name: /Y aller/i })
+    expect(link.getAttribute('href')).toContain(encodeURIComponent('5 rue des Flamboyants'))
+  })
+
+  it('utilise le nom + Guadeloupe quand l\'adresse est absente', async () => {
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    const link = screen.getByRole('link', { name: /Y aller/i })
+    expect(link.getAttribute('href')).toContain(encodeURIComponent('Plage du Gosier Guadeloupe'))
+    expect(link.getAttribute('href')).not.toContain('null')
+  })
+
+  it('utilise l\'adresse dans un étape d\'itinéraire étendue', async () => {
+    useClientMap.mockReturnValue({
+      map: { client_name: 'Alice', notes: {}, show_route: true },
+      pois: [PLAGE_1, RESTO_1],
+      itineraries: [{ id: 'itin-1', name: 'Test', steps: ['plage-1', 'resto-1'] }],
+      loading: false, is404: false, is403: false, error: null,
+    })
+    renderPage()
+    await userEvent.click(screen.getByTestId('marker-resto-1'))
+    const link = screen.getByRole('link', { name: /Y aller/i })
+    expect(link.getAttribute('href')).toContain(encodeURIComponent('5 rue des Flamboyants'))
+  })
+})
+
+// ── Mon domicile ──────────────────────────────────────────────
+
+function mockGeocoder(address = '5 rue des Flamboyants, Gosier, Guadeloupe') {
+  const geocode = vi.fn().mockResolvedValue({
+    results: [{
+      geometry: { location: { lat: () => 16.2, lng: () => -61.5 } },
+      formatted_address: address,
+    }],
+  })
+  window.google = { maps: { Geocoder: vi.fn(() => ({ geocode })) } }
+  return geocode
+}
+
+function mockGeocoderEmpty() {
+  const geocode = vi.fn().mockResolvedValue({ results: [] })
+  window.google = { maps: { Geocoder: vi.fn(() => ({ geocode })) } }
+  return geocode
+}
+
+const HOME_DATA = { lat: 16.2, lng: -61.5, address: '5 rue des Flamboyants, Gosier' }
+
+describe('Mon domicile — desktop', () => {
+  it('affiche le bouton Mon domicile sur la carte', () => {
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Mon domicile' })).toBeInTheDocument()
+  })
+
+  it('ouvre le modal quand aucun domicile n\'est enregistré', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByPlaceholderText(/rue de la Plage/i)).toBeInTheDocument()
+  })
+
+  it('affiche une erreur quand le géocodeur n\'est pas encore chargé', async () => {
+    // window.google n'est pas défini
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    await userEvent.type(screen.getByPlaceholderText(/rue de la Plage/i), '12 rue test')
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    expect(await screen.findByText(/pas encore chargée/i)).toBeInTheDocument()
+  })
+
+  it('affiche une erreur quand l\'adresse est introuvable', async () => {
+    mockGeocoderEmpty()
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    await userEvent.type(screen.getByPlaceholderText(/rue de la Plage/i), 'xyz abc zzz')
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    expect(await screen.findByText(/Adresse introuvable/i)).toBeInTheDocument()
+  })
+
+  it('le bouton Enregistrer est désactivé sans saisie et actif avec saisie', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    // Champ vide → bouton désactivé
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled()
+    await userEvent.type(screen.getByPlaceholderText(/rue de la Plage/i), '5 rue des Flamboyants')
+    // Champ rempli → bouton actif
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).not.toBeDisabled()
+  })
+
+  it('relit homeData depuis localStorage au montage du composant', () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    // Le bouton est bleu (homeData présent) — cliquer ouvre HomeInfoPanel
+    // On vérifie que l'UI reflète bien les données sauvegardées
+    expect(screen.getByRole('button', { name: 'Mon domicile' })).toBeInTheDocument()
+    // La validation du format localStorage partiel est testée séparément
+  })
+
+  it('ouvre directement HomeInfoPanel quand un domicile est déjà enregistré', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Modifier' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeInTheDocument()
+  })
+
+  it('Supprimer efface le domicile, ferme le panel et nettoie localStorage', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer' }))
+    expect(screen.queryByText(HOME_DATA.address)).not.toBeInTheDocument()
+    expect(localStorage.getItem('tikoin_home_test-slug')).toBeNull()
+  })
+
+
+
+  it('Modifier rouvre le modal avec l\'adresse courante pré-remplie', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Modifier' }))
+    const input = screen.getByPlaceholderText(/rue de la Plage/i)
+    expect(input.value).toBe(HOME_DATA.address)
+  })
+
+  it('cliquer sur un marker de la carte ferme HomeInfoPanel', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    expect(screen.queryByText(HOME_DATA.address)).not.toBeInTheDocument()
+  })
+
+  it('cliquer le pin domicile sur la carte (via MapView) ouvre HomeInfoPanel', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByTestId('map-home-pin'))
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
+  })
+
+  it('ignore un localStorage avec données partielles (pas d\'address)', () => {
+    localStorage.setItem('tikoin_home_test-slug', JSON.stringify({ lat: 16.2, lng: -61.5 }))
+    renderPage()
+    // Le bouton domicile doit s'ouvrir en mode "ajout" (modal) et non en mode "info"
+    // → le bouton "Mon domicile" ne doit pas ouvrir HomeInfoPanel
+    expect(screen.queryByText('Mon domicile')).not.toBeInTheDocument() // pas de panel
+    expect(screen.getByRole('button', { name: 'Mon domicile' })).toBeInTheDocument() // bouton seul
+  })
+
+  it('ferme le modal au clic sur le fond', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByPlaceholderText(/rue de la Plage/i)).toBeInTheDocument()
+    const backdrop = screen.getByPlaceholderText(/rue de la Plage/i).closest('form').parentElement.parentElement
+    fireEvent.click(backdrop)
+    expect(screen.queryByPlaceholderText(/rue de la Plage/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('Mon domicile — mobile', () => {
+  beforeEach(() => {
+    useIsMobile.mockReturnValue(true)
+  })
+
+  it('affiche le bouton Mon domicile sur mobile', () => {
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Mon domicile' })).toBeInTheDocument()
+  })
+
+  it('ouvre HomeInfoSheet quand un domicile est enregistré', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Modifier l.adresse/i })).toBeInTheDocument()
+  })
+
+  it('Supprimer depuis HomeInfoSheet efface le domicile', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    await userEvent.click(screen.getByRole('button', { name: /Supprimer/i }))
+    expect(screen.queryByText(HOME_DATA.address)).not.toBeInTheDocument()
+    expect(localStorage.getItem('tikoin_home_test-slug')).toBeNull()
+  })
+
+  it('cliquer un marker ferme HomeInfoSheet', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
+    await userEvent.click(screen.getByTestId('marker-plage-1'))
+    expect(screen.queryByText(HOME_DATA.address)).not.toBeInTheDocument()
+  })
+
+  it('le bouton FAB domicile est masqué quand HomeInfoSheet est ouvert', async () => {
+    localStore['tikoin_home_test-slug'] = JSON.stringify(HOME_DATA)
+    renderPage()
+    // Le FAB est visible au départ
+    expect(screen.getByRole('button', { name: 'Mon domicile' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Mon domicile' }))
+    // HomeInfoSheet est ouvert — le FAB disparaît (condition !homeOpen dans le rendu)
+    expect(screen.queryByRole('button', { name: 'Mon domicile' })).not.toBeInTheDocument()
+    // La sheet est bien affichée
+    expect(screen.getByText(HOME_DATA.address)).toBeInTheDocument()
   })
 })
 

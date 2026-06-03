@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile.js'
 import MapView from '../components/map/MapView.jsx'
 import Chip from '../components/ui/Chip.jsx'
 import { CATEGORIES } from '../lib/constants.js'
-import { X, MapPin, Navigation, Instagram, BookOpen, Route } from 'lucide-react'
+import { X, MapPin, Navigation, Instagram, BookOpen, Route, Home as HomeIcon } from 'lucide-react'
 import { ROUTE_COLORS } from '../lib/constants.js'
 
 function MenuViewer({ src, onClose }) {
@@ -46,6 +46,199 @@ function LeafMark({ size = 22, color = 'var(--color-forest)' }) {
       <path d="M20 3.5 C9 3 3.2 9 3.2 16.5 C3.2 18.6 3.8 20.4 4.6 21.6 C5.8 20.4 6.6 19 7.2 17.4 C9 19 12 18.8 14.6 16.8 C19.4 13 20.6 7 20 3.5 Z" fill={color} />
       <path d="M5.4 20.6 C7.6 14 11.6 9.4 17.4 6.8" fill="none" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
+  )
+}
+
+/* ── Geocoding ────────────────────────────────────────────── */
+async function geocodeAddress(address) {
+  if (!window.google?.maps?.Geocoder) throw new Error('maps_not_ready')
+  const geocoder = new window.google.maps.Geocoder()
+  const response = await geocoder.geocode({ address, region: 'gp' })
+  const result = response.results?.[0]
+  if (!result) return null
+  const loc = result.geometry.location
+  return { lat: loc.lat(), lng: loc.lng(), address: result.formatted_address }
+}
+
+/* ── Home address modal ───────────────────────────────────── */
+function HomeAddressModal({ onSave, onClose, currentAddress }) {
+  const [input, setInput] = useState(currentAddress || '')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!input.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await geocodeAddress(input.trim())
+      setLoading(false)
+      if (result) {
+        onSave(result)
+      } else {
+        setError("Adresse introuvable. Essayez d'être plus précis (ex: 12 rue de la Plage, Gosier).")
+      }
+    } catch (err) {
+      setLoading(false)
+      setError(
+        err.message === 'maps_not_ready'
+          ? "La carte n'est pas encore chargée. Attendez quelques secondes et réessayez."
+          : "Adresse introuvable. Essayez d'être plus précis."
+      )
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-5 shadow-xl"
+        style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 flex items-center justify-center rounded-full" style={{ background: '#EFF6FF' }}>
+              <HomeIcon size={15} color="#1D4ED8" />
+            </span>
+            <h2 className="font-serif italic font-semibold text-lg" style={{ color: 'var(--color-forest-dark)' }}>
+              Mon domicile
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full"
+            style={{ background: 'var(--color-border)' }}
+          >
+            <X size={14} color="var(--color-text-secondary)" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ex: 12 rue de la Plage, Gosier"
+            autoFocus
+            className="w-full px-3 py-3 rounded-xl text-sm"
+            style={{ border: '1.5px solid var(--color-border-mid)', outline: 'none', color: 'var(--color-text-primary)' }}
+          />
+          {error && <p className="text-xs" style={{ color: '#B91C1C' }}>{error}</p>}
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm text-white"
+            style={{ background: !input.trim() || loading ? '#9CA3AF' : '#1D4ED8' }}
+          >
+            {loading ? 'Recherche…' : 'Enregistrer'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/* ── Home info panel desktop ──────────────────────────────── */
+function HomeInfoPanel({ address, onModify, onDelete, onClose }) {
+  return (
+    <div
+      className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-4 flex flex-col gap-3"
+      style={{ border: '1px solid var(--color-border)', width: 260 }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 flex items-center justify-center rounded-full" style={{ background: '#EFF6FF' }}>
+            <HomeIcon size={13} color="#1D4ED8" />
+          </span>
+          <span className="font-serif italic font-semibold text-sm" style={{ color: 'var(--color-forest-dark)' }}>
+            Mon domicile
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ background: 'var(--color-border)' }}
+        >
+          <X size={12} color="var(--color-text-secondary)" />
+        </button>
+      </div>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{address}</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onModify}
+          className="flex-1 py-2 rounded-xl text-xs font-semibold"
+          style={{ border: '1.5px solid #1D4ED8', color: '#1D4ED8' }}
+        >
+          Modifier
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex-1 py-2 rounded-xl text-xs font-semibold"
+          style={{ border: '1.5px solid var(--color-border-mid)', color: '#B91C1C' }}
+        >
+          Supprimer
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── Home info sheet mobile ───────────────────────────────── */
+function HomeInfoSheet({ address, onModify, onDelete, onClose }) {
+  return (
+    <div
+      className="absolute inset-0 z-20 flex flex-col justify-end"
+      style={{ background: 'rgba(26,46,32,0.3)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="bg-white rounded-t-2xl flex flex-col gap-4 p-5"
+        style={{ border: '1px solid var(--color-border)', borderBottom: 'none', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="w-9 h-9 flex items-center justify-center rounded-full" style={{ background: '#EFF6FF' }}>
+              <HomeIcon size={17} color="#1D4ED8" />
+            </span>
+            <span className="font-serif italic font-semibold text-base" style={{ color: 'var(--color-forest-dark)' }}>
+              Mon domicile
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full"
+            style={{ background: 'var(--color-border)' }}
+          >
+            <X size={15} color="var(--color-text-secondary)" />
+          </button>
+        </div>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{address}</p>
+        <button
+          type="button"
+          onClick={onModify}
+          className="w-full py-3.5 rounded-xl font-semibold text-sm"
+          style={{ border: '1.5px solid #1D4ED8', color: '#1D4ED8' }}
+        >
+          Modifier l'adresse
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="w-full py-2.5 rounded-xl font-semibold text-sm"
+          style={{ color: '#B91C1C' }}
+        >
+          Supprimer
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -363,7 +556,9 @@ function ItinerarySheet({ itinerary, allItineraries, notes, expandedId, onExpand
 function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, onClose, onOpenMenu, filterCat, onToggle }) {
   const cat = selectedPoi ? CATEGORIES[selectedPoi.category] : null
   const gmapsUrl = selectedPoi
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
+    ? selectedPoi.address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.address)}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' Guadeloupe')}`
     : null
   const instaUrl = selectedPoi?.instagram_url
     ? selectedPoi.instagram_url.startsWith('http')
@@ -539,7 +734,9 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
 function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
   if (!poi) return null
   const cat = CATEGORIES[poi.category]
-  const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
+  const gmapsUrl = poi.address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`
   const instaUrl = poi.instagram_url
     ? poi.instagram_url.startsWith('http')
       ? poi.instagram_url
@@ -787,7 +984,28 @@ export default function ClientMapPage() {
   const [filterCat, setFilterCat]               = useState(null)
   const [activeItineraryId, setActiveItineraryId] = useState(null)
   const [expandedStepId, setExpandedStepId]     = useState(null)
+  const [homeData, setHomeData]                 = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(`tikoin_home_${slug}`))
+      if (v && typeof v.lat === 'number' && typeof v.lng === 'number' && typeof v.address === 'string') return v
+      return null
+    } catch { return null }
+  })
+  const [showHomeModal, setShowHomeModal]       = useState(false)
+  const [homeOpen, setHomeOpen]                 = useState(false)
   const isMobile = useIsMobile()
+
+  const saveHome = (data) => {
+    localStorage.setItem(`tikoin_home_${slug}`, JSON.stringify(data))
+    setHomeData(data)
+    setShowHomeModal(false)
+    setHomeOpen(false)
+  }
+  const deleteHome = () => {
+    localStorage.removeItem(`tikoin_home_${slug}`)
+    setHomeData(null)
+    setHomeOpen(false)
+  }
 
   const selectedPoi  = pois.find(p => p.id === selectedId)
   const selectedNote = map?.notes?.[selectedId]
@@ -829,6 +1047,7 @@ export default function ClientMapPage() {
   )
 
   const handleSelect = (id) => {
+    setHomeOpen(false)
     const itinerary = resolvedItineraries.find(it => it.steps.includes(id))
     if (hasItinerary && itinerary) {
       setActiveItineraryId(itinerary.id)
@@ -900,6 +1119,13 @@ export default function ClientMapPage() {
       </nav>
 
       {menuSrc && <MenuViewer src={menuSrc} onClose={() => setMenuSrc(null)} />}
+      {showHomeModal && (
+        <HomeAddressModal
+          onSave={saveHome}
+          onClose={() => setShowHomeModal(false)}
+          currentAddress={homeData?.address}
+        />
+      )}
 
       {/* Carte plein écran */}
       <div className="flex-1 relative min-h-0">
@@ -909,6 +1135,8 @@ export default function ClientMapPage() {
           onSelect={handleSelect}
           routes={routes}
           pinNumbers={pinNumbers}
+          homeMarker={homeData}
+          onHomeClick={() => { setHomeOpen(true); setSelectedId(null); setActiveItineraryId(null) }}
         />
 
         {isMobile ? (
@@ -920,7 +1148,7 @@ export default function ClientMapPage() {
                 onToggle={toggleFilter}
               />
             )}
-            {hasItinerary && !itineraryOpen && !selectedPoi && (
+            {hasItinerary && !itineraryOpen && !selectedPoi && !homeOpen && (
               <button
                 type="button"
                 onClick={() => setActiveItineraryId(resolvedItineraries[0]?.id)}
@@ -929,6 +1157,20 @@ export default function ClientMapPage() {
               >
                 <Route size={14} />
                 {resolvedItineraries.length > 1 ? `Itinéraires (${resolvedItineraries.length})` : 'Itinéraire'}
+              </button>
+            )}
+            {!itineraryOpen && !selectedPoi && !homeOpen && (
+              <button
+                type="button"
+                onClick={() => homeData ? setHomeOpen(true) : setShowHomeModal(true)}
+                aria-label="Mon domicile"
+                className="absolute bottom-20 left-4 z-10 w-11 h-11 flex items-center justify-center rounded-full shadow-lg"
+                style={{
+                  background: homeData ? '#1D4ED8' : 'white',
+                  border: homeData ? 'none' : '1.5px solid var(--color-border-mid)',
+                }}
+              >
+                <HomeIcon size={18} color={homeData ? 'white' : 'var(--color-text-secondary)'} />
               </button>
             )}
             {itineraryOpen && (
@@ -949,6 +1191,14 @@ export default function ClientMapPage() {
                 customNote={selectedNote}
                 onClose={() => setSelectedId(null)}
                 onOpenMenu={setMenuSrc}
+              />
+            )}
+            {homeOpen && homeData && (
+              <HomeInfoSheet
+                address={homeData.address}
+                onModify={() => { setHomeOpen(false); setShowHomeModal(true) }}
+                onDelete={deleteHome}
+                onClose={() => setHomeOpen(false)}
               />
             )}
           </>
@@ -988,6 +1238,27 @@ export default function ClientMapPage() {
               >
                 <Route size={14} />
                 {resolvedItineraries.length > 1 ? `Itinéraires (${resolvedItineraries.length})` : 'Itinéraire'}
+              </button>
+            )}
+            {homeOpen && homeData ? (
+              <HomeInfoPanel
+                address={homeData.address}
+                onModify={() => { setHomeOpen(false); setShowHomeModal(true) }}
+                onDelete={deleteHome}
+                onClose={() => setHomeOpen(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => homeData ? setHomeOpen(true) : setShowHomeModal(true)}
+                aria-label="Mon domicile"
+                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full shadow-md"
+                style={{
+                  background: homeData ? '#1D4ED8' : 'white',
+                  border: homeData ? 'none' : '1.5px solid var(--color-border-mid)',
+                }}
+              >
+                <HomeIcon size={17} color={homeData ? 'white' : 'var(--color-text-secondary)'} />
               </button>
             )}
             {/* Watermark desktop */}
