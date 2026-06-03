@@ -149,13 +149,6 @@ function SpotBottomSheet({ poi, onClose, onEdit, onDelete }) {
               {poi.difficulty && <div className="flex justify-between px-3 py-2.5"><span style={{ color: 'var(--color-text-muted)' }}>Difficulté</span><span style={{ color: 'var(--color-text-primary)' }}>{poi.difficulty}</span></div>}
             </div>
           )}
-          {poi.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {poi.tags.map(tag => (
-                <span key={tag} className="px-2 py-1 rounded-full text-xs" style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>{tag}</span>
-              ))}
-            </div>
-          )}
           {/* Liens externes */}
           <div className="flex gap-2">
             <a href={gmapsUrl} target="_blank" rel="noopener noreferrer"
@@ -239,13 +232,6 @@ function DesktopPopover({ poi, shown, onClose, onEdit, onDelete }) {
             {poi.access    && <div className="flex justify-between px-3 py-2" style={{ borderBottom: '1px solid var(--color-border)' }}><span style={{ color: 'var(--color-text-muted)' }}>Accès</span><span style={{ color: 'var(--color-text-primary)' }}>{poi.access}</span></div>}
             {poi.duration  && <div className="flex justify-between px-3 py-2" style={{ borderBottom: poi.difficulty ? '1px solid var(--color-border)' : 'none' }}><span style={{ color: 'var(--color-text-muted)' }}>Durée</span><span style={{ color: 'var(--color-text-primary)' }}>{poi.duration}</span></div>}
             {poi.difficulty && <div className="flex justify-between px-3 py-2"><span style={{ color: 'var(--color-text-muted)' }}>Difficulté</span><span style={{ color: 'var(--color-text-primary)' }}>{poi.difficulty}</span></div>}
-          </div>
-        )}
-        {poi.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {poi.tags.map(tag => (
-              <span key={tag} className="px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>{tag}</span>
-            ))}
           </div>
         )}
         <div className="flex gap-2 pt-1">

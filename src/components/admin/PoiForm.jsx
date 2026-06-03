@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MapPin, Crosshair } from 'lucide-react'
-import { CATEGORIES, TAG_OPTIONS } from '../../lib/constants.js'
+import { CATEGORIES } from '../../lib/constants.js'
 import GeocoderInput from './GeocoderInput.jsx'
 import ImageUpload from './ImageUpload.jsx'
 import Button from '../ui/Button.jsx'
@@ -53,7 +53,7 @@ const INITIAL = {
   name: '', category: '', description: '', details: '',
   access: '', duration: '', difficulty: '',
   address: '', latitude: '', longitude: '',
-  instagram_url: '', image_url: '', tags: [], is_active: true,
+  instagram_url: '', image_url: '', is_active: true,
   menu_url: '', flo_reco: '',
 }
 
@@ -63,13 +63,6 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
   const [errors, setErrors] = useState({})
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
-
-  const toggleTag = (tag) => {
-    setForm(f => ({
-      ...f,
-      tags: f.tags.includes(tag) ? f.tags.filter(t => t !== tag) : [...f.tags, tag],
-    }))
-  }
 
   const validate = () => {
     const e = {}
@@ -83,8 +76,9 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!validate()) return
+    const { tags: _, ...payload } = form
     onSave({
-      ...form,
+      ...payload,
       latitude:  parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
     })
@@ -208,26 +202,6 @@ export default function PoiForm({ initial, onSave, onCancel, saving }) {
           </div>
         </>
       )}
-
-      {/* Tags */}
-      <Field label="Tags">
-        <div className="flex flex-wrap gap-2 mt-1">
-          {TAG_OPTIONS.map(tag => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => toggleTag(tag)}
-              className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-              style={{
-                background: form.tags.includes(tag) ? 'var(--color-forest)' : 'var(--color-border)',
-                color: form.tags.includes(tag) ? 'white' : 'var(--color-text-secondary)',
-              }}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      </Field>
 
       {/* Actif */}
       <label className="flex items-center gap-3 cursor-pointer">

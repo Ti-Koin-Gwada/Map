@@ -8,12 +8,12 @@ export default async function handler(req, res) {
 
   if (req.method === 'PUT') {
     const { name, description, details, category, address, latitude, longitude,
-      instagram_url, image_url, tags, is_active, menu_url, flo_reco } = req.body ?? {}
+      instagram_url, image_url, is_active, menu_url, flo_reco } = req.body ?? {}
     const { data, error } = await supabaseAdmin
       .from('pois')
       .update({
         name, description, details, category, address, latitude, longitude,
-        instagram_url, image_url, tags, is_active,
+        instagram_url, image_url, is_active,
         menu_url: menu_url || null, flo_reco: flo_reco || null,
         updated_at: new Date().toISOString(),
       })

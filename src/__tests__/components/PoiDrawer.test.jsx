@@ -35,13 +35,7 @@ describe('PoiDrawer', () => {
     expect(screen.getByText('Une belle plage de sable blanc.')).toBeInTheDocument()
   })
 
-  it('renders tags', () => {
-    render(<PoiDrawer poi={BASE_POI} />)
-    expect(screen.getByText('famille')).toBeInTheDocument()
-    expect(screen.getByText('baignade')).toBeInTheDocument()
-  })
-
-  it('renders the custom note ("Note de Flo") when provided', () => {
+it('renders the custom note ("Note de Flo") when provided', () => {
     render(<PoiDrawer poi={BASE_POI} customNote="Vraiment incroyable !" />)
     expect(screen.getByText('Note de Flo')).toBeInTheDocument()
     expect(screen.getByText('Vraiment incroyable !')).toBeInTheDocument()

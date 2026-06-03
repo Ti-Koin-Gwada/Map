@@ -127,4 +127,16 @@ describe('POST /api/admin/poi — champs restaurant (menu_url / flo_reco)', () =
     expect(inserted.menu_url).toBeNull()
     expect(inserted.flo_reco).toBeNull()
   })
+
+  it('n\'inclut pas tags dans le payload d\'insertion même si fourni dans le body', async () => {
+    wireChain({ data: { id: 'r4', name: 'Spot Test', category: 'plage', latitude: 16, longitude: -61 }, error: null })
+    const res = mockRes()
+    await handler(adminReq('POST', {
+      name: 'Spot Test', category: 'plage', latitude: 16, longitude: -61,
+      tags: ['famille', 'baignade'],
+    }), res)
+    expect(res.statusCode).toBe(201)
+    const inserted = chain.insert.mock.calls[0][0][0]
+    expect(inserted).not.toHaveProperty('tags')
+  })
 })

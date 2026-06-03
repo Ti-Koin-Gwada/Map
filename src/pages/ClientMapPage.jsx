@@ -365,15 +365,6 @@ function InfoPanel({ pois, categories, filteredCount, selectedPoi, customNote, o
                 <p className="text-sm leading-relaxed" style={{ color: '#5C4A14' }}>{customNote}</p>
               </div>
             )}
-            {selectedPoi.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedPoi.tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="flex gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--color-border)' }}>
@@ -564,16 +555,6 @@ function MobileSpotSheet({ poi, customNote, onClose, onOpenMenu }) {
             </div>
           )}
 
-          {poi.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {poi.tags.map(tag => (
-                <span key={tag} className="px-2.5 py-1 rounded-full text-xs font-medium"
-                  style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* CTA fixes en bas */}

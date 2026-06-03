@@ -84,6 +84,15 @@ describe('PUT /api/admin/poi/:id — whitelist et champs restaurant', () => {
     expect(updated).not.toHaveProperty('password')
   })
 
+  it("n'inclut pas tags dans le payload de mise à jour même si fourni dans le body", async () => {
+    wireChain({ data: { id: 'poi-1' }, error: null })
+    const res = mockRes()
+    await handler(adminReq('PUT', { name: 'Plage X', tags: ['famille', 'baignade'] }, 'poi-1'), res)
+    expect(res.statusCode).toBe(200)
+    const updated = chain.update.mock.calls[0][0]
+    expect(updated).not.toHaveProperty('tags')
+  })
+
   it('inclut updated_at dans le UPDATE', async () => {
     wireChain({ data: { id: 'poi-1' }, error: null })
     const res = mockRes()

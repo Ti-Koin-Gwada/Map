@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const { name, description, details, category, address, latitude, longitude,
-      instagram_url, image_url, tags, is_active, menu_url, flo_reco } = req.body ?? {}
+      instagram_url, image_url, is_active, menu_url, flo_reco } = req.body ?? {}
 
     if (!name || !category || latitude == null || longitude == null) {
       return res.status(400).json({ error: 'missing_fields' })
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const { data, error } = await supabaseAdmin
       .from('pois')
       .insert([{ name, description, details, category, address, latitude, longitude,
-        instagram_url, image_url, tags, is_active: is_active ?? true,
+        instagram_url, image_url, is_active: is_active ?? true,
         menu_url: menu_url || null, flo_reco: flo_reco || null }])
       .select()
       .single()

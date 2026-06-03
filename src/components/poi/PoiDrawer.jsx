@@ -132,20 +132,6 @@ export default function PoiDrawer({ poi, customNote, onClose, isMobile }) {
             </div>
           )}
 
-          {/* Tags */}
-          {poi.tags?.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {poi.tags.map(tag => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 rounded-full text-xs font-medium"
-                  style={{ background: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
