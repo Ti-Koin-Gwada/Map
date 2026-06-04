@@ -40,11 +40,9 @@ describe('verifyAdmin', () => {
     expect(payload.role).toBe('admin')
   })
 
-  it('returns payload for non-admin role too (verifyAdmin does not check role)', () => {
+  it('returns null for a token with a non-admin role', () => {
     const token = jwt.sign({ role: 'user' }, SECRET)
-    const payload = verifyAdmin(mockReq(`Bearer ${token}`))
-    expect(payload).not.toBeNull()
-    expect(payload.role).toBe('user')
+    expect(verifyAdmin(mockReq(`Bearer ${token}`))).toBeNull()
   })
 })
 

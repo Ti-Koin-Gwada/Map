@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.js'
 import { usePois } from '../hooks/usePois.js'
@@ -65,11 +64,19 @@ function AdminShell() {
 
 // ── Page Admin (gate d'authentification) ─────────────────────
 export default function AdminPage() {
-  const { isAdmin } = useAdmin()
-  const [loggedIn, setLoggedIn] = useState(isAdmin)
+  const { isAdmin, isLoading } = useAdmin()
 
-  if (!loggedIn) {
-    return <AdminLogin onLogin={() => setLoggedIn(true)} />
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
+        <div className="w-8 h-8 rounded-full border-2 animate-spin"
+          style={{ borderColor: 'var(--color-forest)', borderTopColor: 'transparent' }} />
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return <AdminLogin />
   }
 
   return (

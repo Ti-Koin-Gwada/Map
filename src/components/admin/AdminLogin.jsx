@@ -11,7 +11,7 @@ function LeafMark() {
   )
 }
 
-export default function AdminLogin({ onLogin }) {
+export default function AdminLogin() {
   const { login } = useAdmin()
   const [pwd, setPwd]       = useState('')
   const [show, setShow]     = useState(false)
@@ -24,7 +24,6 @@ export default function AdminLogin({ onLogin }) {
     setLoading(true)
     try {
       await login(pwd)
-      onLogin()
     } catch {
       setError('Mot de passe incorrect.')
     } finally {
