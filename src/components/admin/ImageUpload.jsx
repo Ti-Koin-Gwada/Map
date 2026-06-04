@@ -1,17 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { Upload, X, Loader, ImageIcon } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient.js'
+import { useAdmin } from '../../hooks/useAdmin.js'
 
 const BUCKET = 'spot-images'
 const MAX_MB  = 5
 
-function generatePath(file) {
-  const ext  = file.name.split('.').pop()
-  const rand = Math.random().toString(36).slice(2, 9)
-  return `${Date.now()}-${rand}.${ext}`
-}
-
 export default function ImageUpload({ value, onChange }) {
+  const { authFetch } = useAdmin()
   const [dragging,    setDragging]    = useState(false)
   const [uploading,   setUploading]   = useState(false)
   const [progress,    setProgress]    = useState(0)
@@ -33,24 +29,35 @@ export default function ImageUpload({ value, onChange }) {
     setUploading(true)
     setProgress(10)
 
-    const path = generatePath(file)
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { cacheControl: '3600', upsert: false })
+    try {
+      // 1) Ask the server (authenticated admin) for a single-use signed upload URL.
+      //    The anon key has no write access to the bucket anymore.
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const res = await authFetch('/api/admin/upload-url', {
+        method: 'POST',
+        body:   JSON.stringify({ ext }),
+      })
+      if (!res.ok) throw new Error('sign_failed')
+      const { path, token, publicUrl } = await res.json()
 
-    if (uploadError) {
+      setProgress(40)
+
+      // 2) Upload straight to Supabase Storage with the signed token (no Vercel
+      //    body-size limit, MIME/size still enforced by the bucket).
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .uploadToSignedUrl(path, token, file)
+      if (uploadError) throw uploadError
+
+      setProgress(90)
+      onChange(publicUrl)
+    } catch {
       setError('Erreur lors de l\'upload.')
+    } finally {
       setUploading(false)
       setProgress(0)
-      return
     }
-
-    setProgress(90)
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-    onChange(data.publicUrl)
-    setUploading(false)
-    setProgress(0)
-  }, [onChange])
+  }, [onChange, authFetch])
 
   const handleDrop = useCallback((e) => {
     e.preventDefault()

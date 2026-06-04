@@ -6,7 +6,7 @@ const SECRET = 'test-jwt-secret'
 beforeAll(() => { process.env.JWT_SECRET = SECRET })
 
 // Dynamic import after env is set
-const { verifyAdmin, requireAdmin } = await import('../../../api/_lib/auth.js')
+const { verifyAdmin, requireAdmin, safeEqual } = await import('../../../api/_lib/auth.js')
 
 function mockReq(authHeader = '') {
   return { headers: { authorization: authHeader } }
@@ -70,5 +70,26 @@ describe('requireAdmin', () => {
     const res = mockRes()
     expect(requireAdmin(req, res)).toBe(true)
     expect(res.statusCode).toBe(200) // untouched
+  })
+})
+
+describe('safeEqual (constant-time comparison)', () => {
+  it('returns true for identical strings', () => {
+    expect(safeEqual('coucoucestflo', 'coucoucestflo')).toBe(true)
+  })
+
+  it('returns false for different strings', () => {
+    expect(safeEqual('coucoucestflo', 'wrong')).toBe(false)
+  })
+
+  it('returns false for different-length strings without throwing', () => {
+    // Hashing both sides to a fixed length avoids the timingSafeEqual length error
+    expect(() => safeEqual('a', 'a-much-longer-password')).not.toThrow()
+    expect(safeEqual('a', 'a-much-longer-password')).toBe(false)
+  })
+
+  it('handles empty strings', () => {
+    expect(safeEqual('', '')).toBe(true)
+    expect(safeEqual('', 'x')).toBe(false)
   })
 })

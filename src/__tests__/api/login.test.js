@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import jwt from 'jsonwebtoken'
+import { _reset } from '../../../api/_lib/rate-limit.js'
 
 beforeAll(() => {
   process.env.ADMIN_PASSWORD = 'secret123'
@@ -8,10 +9,15 @@ beforeAll(() => {
   process.env.VERCEL_ENV     = 'production'
 })
 
+// Rate limiter keeps module-level state — reset between tests
+beforeEach(() => _reset())
+
 const handler = (await import('../../../api/admin/login.js')).default
 
+let ipCounter = 0
 function mockReq(method = 'POST', body = {}) {
-  return { method, body }
+  // Unique IP per request so independent tests don't share a rate-limit bucket
+  return { method, body, headers: { 'x-forwarded-for': `10.0.0.${ipCounter++ % 250}` } }
 }
 function mockRes() {
   const r = { statusCode: 200, body: null, headers: {} }
@@ -66,5 +72,26 @@ describe('POST /api/admin/login', () => {
     const p   = jwt.verify(raw, 'test-jwt-secret')
     expect(p.role).toBe('admin')
     expect(p.type).toBe('refresh')
+  })
+})
+
+describe('POST /api/admin/login — rate limiting', () => {
+  it('returns 429 after 5 attempts from the same IP within the window', async () => {
+    const ip = '203.0.113.7'
+    const req = (body) => ({ method: 'POST', body, headers: { 'x-forwarded-for': ip } })
+
+    // 5 allowed attempts (all wrong password → 401)
+    for (let i = 0; i < 5; i++) {
+      const res = mockRes()
+      await handler(req({ password: 'wrong' }), res)
+      expect(res.statusCode).toBe(401)
+    }
+
+    // 6th attempt is throttled, even with the CORRECT password
+    const res = mockRes()
+    await handler(req({ password: 'secret123' }), res)
+    expect(res.statusCode).toBe(429)
+    expect(res.body).toEqual({ error: 'too_many_attempts' })
+    expect(res.headers['Retry-After']).toBeDefined()
   })
 })

@@ -60,11 +60,19 @@ ALTER TABLE client_map_pois ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role only" ON client_map_pois
   USING (auth.role() = 'service_role');
 
--- ── Storage : poi-images ──────────────────────────────────────
--- À créer dans l'interface Supabase Storage :
--- Bucket name : poi-images
--- Public : oui (CDN public)
--- Path format : /{poi_id}/{filename}
+-- ── Storage : spot-images ─────────────────────────────────────
+-- Bucket : spot-images
+--   public            : true (lecture CDN)
+--   file_size_limit   : 5242880 (5 Mo)
+--   allowed_mime_types: image/jpeg, image/png, image/webp, image/gif
+--
+-- Sécurité écriture : pas de policy INSERT/DELETE pour anon. Les uploads
+-- passent par des signed upload URLs émises côté serveur (service_role) via
+-- /api/admin/upload-url, qui bypassent les RLS. Seul le SELECT public reste.
+DROP POLICY IF EXISTS "Admin upload spot-images" ON storage.objects;
+DROP POLICY IF EXISTS "Admin delete spot-images" ON storage.objects;
+CREATE POLICY "Public read spot-images" ON storage.objects
+  FOR SELECT TO public USING (bucket_id = 'spot-images');
 
 -- ── Colonnes restaurant : menu + reco de Flo ────────────────
 ALTER TABLE pois ADD COLUMN IF NOT EXISTS menu_url  TEXT;

@@ -9,13 +9,11 @@ const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY
 function AppRoutes() {
   return (
     <BrowserRouter>
-      <AdminProvider>
-        <Routes>
-          <Route path="/map/:slug" element={<ClientMapPage />} />
-          <Route path="/admin/*"   element={<AdminPage />} />
-          <Route path="/"          element={<Navigate to="/admin" replace />} />
-        </Routes>
-      </AdminProvider>
+      <Routes>
+        <Route path="/map/:slug" element={<ClientMapPage />} />
+        <Route path="/admin/*"   element={<AdminProvider><AdminPage /></AdminProvider>} />
+        <Route path="/"          element={<Navigate to="/admin" replace />} />
+      </Routes>
     </BrowserRouter>
   )
 }

@@ -1,6 +1,16 @@
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 
 const SECRET = () => (process.env.JWT_SECRET ?? '').trim()
+
+// Constant-time string comparison. Hashing both sides to a fixed length first
+// keeps timingSafeEqual happy (it requires equal-length buffers) and also avoids
+// leaking the secret's length through the comparison.
+export function safeEqual(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a)).digest()
+  const hb = crypto.createHash('sha256').update(String(b)).digest()
+  return crypto.timingSafeEqual(ha, hb)
+}
 const COOKIE = 'tikoin_rt'
 const ACCESS_TTL  = '15m'
 const REFRESH_TTL = '7d'
