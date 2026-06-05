@@ -5,7 +5,6 @@ import { useToast } from '../ui/Toast.jsx'
 import { useIsMobile } from '../../hooks/useIsMobile.js'
 import MapView from '../map/MapView.jsx'
 import MapFilters from '../map/MapFilters.jsx'
-import { CategoryBadge } from '../ui/Badge.jsx'
 import Modal from '../ui/Modal.jsx'
 import PoiForm from './PoiForm.jsx'
 import { CATEGORIES } from '../../lib/constants.js'
@@ -188,7 +187,7 @@ function SpotBottomSheet({ poi, onClose, onEdit, onDelete }) {
 }
 
 /* ── Desktop popover panel ────────────────────────────────── */
-function DesktopPopover({ poi, shown, onClose, onEdit, onDelete }) {
+function DesktopPopover({ poi, onClose, onEdit, onDelete }) {
   if (!poi) return null
   const cat = CATEGORIES[poi.category]
   const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.name + ' Guadeloupe')}`

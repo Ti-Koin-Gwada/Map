@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import jwt from 'jsonwebtoken'
 import { mockReq, mockRes, makeChain } from './_helpers.js'
 

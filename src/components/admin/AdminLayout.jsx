@@ -12,7 +12,7 @@ function LeafMark() {
   )
 }
 
-function SidebarItem({ to, icon: Icon, label }) {
+function SidebarItem({ to, label }) {
   return (
     <NavLink
       to={to}

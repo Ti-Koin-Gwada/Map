@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-
-// Flush Promises + React state updates from async handlers outside of React events
-const flushAll = () => act(async () => { await new Promise(r => setTimeout(r, 50)) })
 
 // ── Mocks ────────────────────────────────────────────────────
 
@@ -350,17 +347,6 @@ describe('Bouton Y aller', () => {
 })
 
 // ── Mon domicile ──────────────────────────────────────────────
-
-function mockGeocoder(address = '5 rue des Flamboyants, Gosier, Guadeloupe') {
-  const geocode = vi.fn().mockResolvedValue({
-    results: [{
-      geometry: { location: { lat: () => 16.2, lng: () => -61.5 } },
-      formatted_address: address,
-    }],
-  })
-  window.google = { maps: { Geocoder: vi.fn(() => ({ geocode })) } }
-  return geocode
-}
 
 function mockGeocoderEmpty() {
   const geocode = vi.fn().mockResolvedValue({ results: [] })

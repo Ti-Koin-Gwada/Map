@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useAdmin, AdminProvider } from '../../hooks/useAdmin.js'
 
@@ -160,7 +160,7 @@ describe('useAdmin — auto-refresh', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ token: token2 }) }) // auto-refresh
     vi.stubGlobal('fetch', fetchMock)
 
-    const { result } = renderHook(() => useAdmin(), { wrapper })
+    renderHook(() => useAdmin(), { wrapper })
 
     // Flush the initial refresh fetch
     await act(async () => { await Promise.resolve() })

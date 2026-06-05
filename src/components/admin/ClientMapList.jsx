@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, ExternalLink, Plus, Trash2 } from 'lucide-react'
 import { useClientMaps } from '../../hooks/useClientMaps.js'
 import { useToast } from '../ui/Toast.jsx'
-import { FormatBadge, StatusBadge } from '../ui/Badge.jsx'
+import { FormatBadge } from '../ui/Badge.jsx'
 import { useIsMobile } from '../../hooks/useIsMobile.js'
 
 function Toggle({ on, onChange }) {

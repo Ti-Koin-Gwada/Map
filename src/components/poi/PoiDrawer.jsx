@@ -1,7 +1,6 @@
 import { X, MapPin, Navigation, Instagram } from 'lucide-react'
 import { CATEGORIES } from '../../lib/constants.js'
 import { CategoryBadge } from '../ui/Badge.jsx'
-import Button from '../ui/Button.jsx'
 
 function SpotPhoto({ poi, height = 220 }) {
   const cat = CATEGORIES[poi.category]
