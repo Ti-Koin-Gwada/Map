@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { CATEGORIES, CATEGORY_OPTIONS, TAG_OPTIONS, FORFAIT_OPTIONS, MAP_CENTER, MAP_ZOOM } from '../../lib/constants.js'
 
 describe('CATEGORIES', () => {
-  const EXPECTED_KEYS = ['plage', 'restaurant', 'randonnee', 'activite', 'spot_cache']
+  const EXPECTED_KEYS = ['plage', 'restaurant', 'randonnee', 'activite', 'spot_cache', 'boutique', 'marche']
 
-  it('has exactly 5 categories', () => {
-    expect(Object.keys(CATEGORIES)).toHaveLength(5)
+  it('has exactly 7 categories', () => {
+    expect(Object.keys(CATEGORIES)).toHaveLength(7)
   })
 
   it('contains all expected category keys', () => {

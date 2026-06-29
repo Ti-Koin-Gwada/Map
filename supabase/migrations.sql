@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS pois (
   duration      TEXT,
   difficulty    TEXT,
   category      TEXT NOT NULL CHECK (category IN (
-    'plage', 'restaurant', 'randonnee', 'activite', 'spot_cache'
+    'plage', 'restaurant', 'randonnee', 'activite', 'spot_cache', 'boutique', 'marche'
   )),
   address       TEXT,
   latitude      FLOAT8 NOT NULL,

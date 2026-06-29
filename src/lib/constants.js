@@ -4,6 +4,8 @@ export const CATEGORIES = {
   randonnee:  { label: 'Randonnées & Nature',       color: '#22C55E', bgLight: '#DCFCE7', icon: '🌿' },
   activite:   { label: 'Activités & Expériences',   color: '#A855F7', bgLight: '#F3E8FF', icon: '🎯' },
   spot_cache: { label: 'Spots Cachés & Insolites',  color: '#EAB308', bgLight: '#FEF9C3', icon: '✨' },
+  boutique:   { label: 'Boutique souvenir',         color: '#EC4899', bgLight: '#FCE7F3', icon: '🛍️' },
+  marche:     { label: 'Marché local',              color: '#14B8A6', bgLight: '#CCFBF1', icon: '🧺' },
 }
 
 export const CATEGORY_OPTIONS = Object.entries(CATEGORIES).map(([value, c]) => ({
